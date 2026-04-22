@@ -1,3 +1,3 @@
-package com.motherhood.app.config;
+package main.java.com.motherhood.app.config;
 
 public class SecurityConfig {}
