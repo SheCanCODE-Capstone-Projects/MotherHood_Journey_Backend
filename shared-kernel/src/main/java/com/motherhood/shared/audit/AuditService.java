@@ -10,7 +10,7 @@ public class AuditService {
 
 
     public void log(String action, String detail, String path, String traceId) {
-        log.debug("[AUDIT STUB] action={} | detail={} | path={} | traceId={}",
+        log.info("[AUDIT STUB] action={} | detail={} | path={} | traceId={}",
                 action, detail, path, traceId);
     }
 }
