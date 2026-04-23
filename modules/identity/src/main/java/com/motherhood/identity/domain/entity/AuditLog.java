@@ -24,7 +24,7 @@ public class AuditLog {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "user_id", nullable = false)
+    `@Column`(name = "user_id")
     private UUID userId;
 
     @Column(name = "action", nullable = false, length = 32)

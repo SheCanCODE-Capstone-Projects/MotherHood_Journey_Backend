@@ -58,16 +58,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String phoneNumber = jwtTokenProvider.getPhoneNumber(token);
             UUID userId = jwtTokenProvider.getUserId(token);
 
-            User user = userRepository.findByPhoneNumber(phoneNumber)
+            User user = userRepository.findById(userId)
                     .orElse(null);
 
-            if (user == null || !user.isActive()) {
+            if (user == null || !user.isActive() || !phoneNumber.equals(user.getPhoneNumber())) {
                 logFailure(userId, "User not found or inactive", request);
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            request.setAttribute("userId", userId);
+            request.setAttribute("userId", user.getId());
             request.setAttribute("facilityId", jwtTokenProvider.getFacilityId(token));
             request.setAttribute("geoScopeIds", jwtTokenProvider.getGeoScopeIds(token));
 
@@ -75,7 +75,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     new UsernamePasswordAuthenticationToken(
                             user,
                             null,
-                            List.of(new SimpleGrantedAuthority(user.getRole().name()))
+                            List.of(user.getRole().toGrantedAuthority())
                     );
 
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

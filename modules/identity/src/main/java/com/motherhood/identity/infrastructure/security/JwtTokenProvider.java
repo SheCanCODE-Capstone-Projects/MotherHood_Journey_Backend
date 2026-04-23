@@ -45,12 +45,11 @@ public class JwtTokenProvider {
         Date expiry = new Date(now.getTime() + ttlMs);
 
         JwtBuilder builder = Jwts.builder()
-                .subject(user.getPhoneNumber())
+                .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiration(expiry)
                 .claim(JwtClaims.USER_ID,  user.getId().toString())
                 .claim(JwtClaims.ROLE,     user.getRole().name())
-                .claim(JwtClaims.PHONE,    user.getPhoneNumber())
                 .claim(JwtClaims.LANGUAGE, user.getPreferredLanguage());
 
         if (user.getFacilityId() != null) {
@@ -109,8 +108,14 @@ public class JwtTokenProvider {
     }
 
     public boolean isTokenExpired(String token) {
-        try { return parseClaims(token).getExpiration().before(new Date()); }
-        catch (ExpiredJwtException e) { return true; }
+        try {
+            return parseClaims(token).getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            // treat invalid tokens as "not usable"; caller should pair with validateToken
+            return true;
+        }
     }
 
     private Claims parseClaims(String token) {
