@@ -11,19 +11,17 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ConsentRequest {
+public class ConsentResponse {
 
-    // Which mother is giving consent
+    private UUID id;
     private UUID motherId;
-
-    // What type of consent
     private ConsentType consentType;
     private Boolean granted;
-
-    // Who is recording this consent
     private String grantedByRole;
-
-    // Legal basis for processing
     private String legalBasis;
+    private LocalDateTime consentedAt;
     private LocalDateTime expiresAt;
+
+    private LocalDateTime revokedAt;
+    private Boolean active;
 }
