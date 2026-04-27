@@ -1,4 +1,4 @@
-package com.motherhood.app.config;
+package main.java.com.motherhood.app.config;
 
 import com.motherhood.shared.rbac.Role;
 import org.springframework.context.annotation.Bean;
