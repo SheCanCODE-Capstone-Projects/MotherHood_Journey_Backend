@@ -143,13 +143,16 @@ Response 200 OK:
 ### How other services use the gate
 
 // Inside GovernmentSyncService — before pushing data to HMIS
+
 if (!consentService.hasActiveConsent(motherId, ConsentType.GOV_DATA_SHARE)) {
 
 throw new RuntimeException(
 "Cannot share data — mother has not given GOV_DATA_SHARE consent"
 );
 }
+
 //only reaches here if consent is valid and active 
+
 sendDataTo HMIS(motherId);
 
 ## Module structure
