@@ -14,15 +14,12 @@ import java.util.UUID;
 
 @Entity
 @Table(
-        name = "users",
-        indexes = {
-                @Index(name = "idx_users_nid",      columnList = "national_id",  unique = true),
-                @Index(name = "idx_users_phone",    columnList = "phone_number", unique = true),
-                @Index(name = "idx_users_role",     columnList = "role"),
-                @Index(name = "idx_users_facility", columnList = "facility_id")
-        }
-)
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+        name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class User implements UserDetails {
 
     @Id
