@@ -1,3 +1,6 @@
-package com.motherhood.identity.infrastructure.persistence;
+package main.java.com.motherhood.identity.infrastructure.persistence;
+public class JpaUserRepository {
+
+}
 
 
