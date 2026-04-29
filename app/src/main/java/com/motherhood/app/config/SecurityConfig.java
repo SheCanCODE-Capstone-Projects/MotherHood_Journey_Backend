@@ -2,6 +2,7 @@ package com.motherhood.app.config;
 
 import com.motherhood.identity.domain.enums.Role;
 import com.motherhood.identity.infrastructure.security.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,7 +22,8 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(CorsConfigurationSource corsConfigurationSource,
+    public SecurityConfig(
+            @Qualifier("corsConfigurationSource") CorsConfigurationSource corsConfigurationSource,
                           JwtAuthFilter jwtAuthFilter) {
         this.corsConfigurationSource = corsConfigurationSource;
         this.jwtAuthFilter = jwtAuthFilter;

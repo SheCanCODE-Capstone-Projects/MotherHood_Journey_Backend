@@ -48,6 +48,23 @@
             <artifactId>domain-identity</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!-- needed for GeoLocation import in User.java -->
+        <dependency>
+            <groupId>com.motherhood</groupId>
+            <artifactId>domain-geo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- needed for Facility import in User.java -->
+        <dependency>
+            <groupId>com.motherhood</groupId>
+            <artifactId>domain-facility</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

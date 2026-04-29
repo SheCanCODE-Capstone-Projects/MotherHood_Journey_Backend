@@ -1,5 +1,9 @@
 package com.motherhood.maternal.domain.entity;
 
+import com.motherhood.facility.domain.model.Facility;
+import com.motherhood.geo.domain.model.GeoLocation;
+import com.motherhood.maternal.domain.enums.EducationLevel;
+import com.motherhood.maternal.domain.enums.NidaVerifiedStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -9,8 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "mothers")
+@Table(name = "mothers")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,31 +26,31 @@ public class Mother {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-
     @Column(name = "user_id", nullable = false, unique = true)
     private UUID userId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "facility_id", nullable = false)
+    private Facility facility;
 
-    @Column(name = "facility_id", nullable = false)
-    private UUID facilityId;
-
-    @Column(name = "geo_location_id", nullable = false)
-    private UUID geoLocationId;
-
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "geo_location_id", nullable = false)
+    private GeoLocation geoLocation;
 
     @Column(name = "health_id", nullable = false, unique = true, length = 32)
     private String healthId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "nida_verified_status", nullable = false, length = 16)
     @Builder.Default
-    private String nidaVerifiedStatus = "PENDING";
+    private NidaVerifiedStatus nidaVerifiedStatus = NidaVerifiedStatus.PENDING;
 
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
-
+    @Enumerated(EnumType.STRING)
     @Column(name = "education_level", length = 32)
-    private String educationLevel;
+    private EducationLevel educationLevel;
 
     @Column(name = "registered_at", nullable = false, updatable = false)
     @Builder.Default
