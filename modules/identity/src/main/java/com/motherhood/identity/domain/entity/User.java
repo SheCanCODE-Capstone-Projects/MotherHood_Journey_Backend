@@ -3,8 +3,6 @@ package com.motherhood.identity.domain.entity;
 import com.motherhood.identity.domain.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
-import com.motherhood.facility.domain.model.Facility;
-import com.motherhood.geo.domain.model.GeoLocation;
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

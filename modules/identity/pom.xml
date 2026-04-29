@@ -63,7 +63,6 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
-            <version>10.10.0</version>
         </dependency>
 
         <dependency>
@@ -88,19 +87,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- needed for GeoLocation import in User.java -->
-        <dependency>
-            <groupId>com.motherhood</groupId>
-            <artifactId>domain-geo</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <!-- needed for Facility import in User.java -->
-        <dependency>
-            <groupId>com.motherhood</groupId>
-            <artifactId>domain-facility</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>

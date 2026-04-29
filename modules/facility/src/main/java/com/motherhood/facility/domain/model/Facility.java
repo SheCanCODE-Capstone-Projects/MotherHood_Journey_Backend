@@ -1,23 +1,54 @@
 package com.motherhood.facility.domain.model;
 
+import com.motherhood.shared.audit.Auditable;
 import jakarta.persistence.*;
-import lombok.*;
-import org.hibernate.annotations.UuidGenerator;
-import java.util.UUID;
 
 @Entity
 @Table(name = "facilities")
-@Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Facility {
+public class Facility extends Auditable {
+
+    public enum Type { HOSPITAL, HEALTH_CENTER, CLINIC, DISPENSARY }
 
     @Id
-    @UuidGenerator
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @Column(name = "name", nullable = false)
+    @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
+    private String district;
+
+    @Column(nullable = false)
+    private String province;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Type type;
+
+    private String phoneNumber;
+    private Double latitude;
+    private Double longitude;
+
+    protected Facility() {}
+
+    public Facility(String name, String district, String province, Type type,
+                    String phoneNumber, Double latitude, Double longitude) {
+        this.name = name;
+        this.district = district;
+        this.province = province;
+        this.type = type;
+        this.phoneNumber = phoneNumber;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public Long getId() { return id; }
+    public String getName() { return name; }
+    public String getDistrict() { return district; }
+    public String getProvince() { return province; }
+    public Type getType() { return type; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public Double getLatitude() { return latitude; }
+    public Double getLongitude() { return longitude; }
 }
