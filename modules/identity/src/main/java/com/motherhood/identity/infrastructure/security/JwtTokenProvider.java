@@ -49,6 +49,7 @@ public class JwtTokenProvider {
                 .issuedAt(now)
                 .expiration(expiry)
                 .claim(JwtClaims.USER_ID,  user.getId().toString())
+                .claim(JwtClaims.PHONE,    user.getPhoneNumber())
                 .claim(JwtClaims.ROLE,     user.getRole().name())
                 .claim(JwtClaims.LANGUAGE, user.getPreferredLanguage());
 
@@ -84,7 +85,7 @@ public class JwtTokenProvider {
 
 
     public String getPhoneNumber(String token) {
-        return parseClaims(token).getSubject();
+        return (String) parseClaims(token).get(JwtClaims.PHONE);
     }
 
     public UUID getUserId(String token) {
