@@ -25,6 +25,7 @@ public class NidaVerificationService {
             try {
                 // TODO: integrate with actual NIDA API
                 log.info("Triggering NIDA verification for mother {}", motherId);
+
                 // Placeholder — real impl calls NIDA REST API and updates status
                 updateStatus(mother, NidaVerifiedStatus.PENDING);
             } catch (Exception e) {
@@ -35,7 +36,7 @@ public class NidaVerificationService {
     }
 
     private void updateStatus(Mother mother, NidaVerifiedStatus status) {
-        mother.setNidaVerifiedStatus(status);
+        mother.setNidaVerifiedStatus(status.name());
         motherRepository.save(mother);
     }
 }

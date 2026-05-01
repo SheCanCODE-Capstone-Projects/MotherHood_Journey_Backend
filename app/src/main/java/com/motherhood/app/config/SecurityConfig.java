@@ -2,6 +2,7 @@ package com.motherhood.app.config;
 
 import com.motherhood.identity.domain.enums.Role;
 import com.motherhood.identity.infrastructure.security.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -21,8 +22,10 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final JwtAuthFilter jwtAuthFilter;
 
-    public SecurityConfig(CorsConfigurationSource corsConfigurationSource,
-                          JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(
+            @Qualifier("corsConfigurationSource") CorsConfigurationSource corsConfigurationSource,
+            JwtAuthFilter jwtAuthFilter
+    ) {
         this.corsConfigurationSource = corsConfigurationSource;
         this.jwtAuthFilter = jwtAuthFilter;
     }
@@ -44,7 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/mothers/**")
-                            .hasAnyRole(Role.HEALTH_WORKER.name(), Role.FACILITY_ADMIN.name())
+                            .hasAnyRole(Role.HEALTH_WORKER.name(), Role.FACILITY_ADMIN.name(), Role.DISTRICT_OFFICER.name())
                         .requestMatchers("/api/v1/children/**")
                             .hasAnyRole(Role.HEALTH_WORKER.name(), Role.FACILITY_ADMIN.name())
                         .requestMatchers("/api/v1/appointments/**")
