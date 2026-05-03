@@ -1,0 +1,183 @@
+name: Motherhood Journey CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKER_HUB_USERNAME }}/motherhood-journey
+  JAVA_VERSION: "21"
+
+jobs:
+
+  # ═══════════════════════════════════════════════════════════════════
+  #  STAGE 1 – TEST
+  # ═══════════════════════════════════════════════════════════════════
+  test:
+    name: "Stage 1 – Test"
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB:       motherhood_test
+          POSTGRES_USER:     test_user
+          POSTGRES_PASSWORD: test_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: ./.github/actions/java-setup
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Run tests
+        env:
+          SPRING_DATASOURCE_URL:      jdbc:postgresql://localhost:5432/motherhood_test
+          SPRING_DATASOURCE_USERNAME: test_user
+          SPRING_DATASOURCE_PASSWORD: test_pass
+          SPRING_PROFILES_ACTIVE:     test
+          JWT_SECRET:                 test-secret-key-for-ci-only-not-production
+        run: mvn test --no-transfer-progress
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: target/surefire-reports/
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════
+  #  STAGE 2 – BUILD & PUSH
+  # ═══════════════════════════════════════════════════════════════════
+  build:
+    name: "Stage 2 – Build & Push Image"
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push'
+
+    outputs:
+      image_tag:    ${{ steps.docker.outputs.image_tag }}
+      image_digest: ${{ steps.docker.outputs.image_digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: ./.github/actions/java-setup
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Build and push Docker image
+        id: docker
+        uses: ./.github/actions/docker-build-push
+        with:
+          image:                ${{ env.DOCKER_IMAGE }}
+          docker-hub-username:  ${{ secrets.DOCKER_HUB_USERNAME }}
+          docker-hub-token:     ${{ secrets.DOCKER_HUB_TOKEN }}
+          is-main:              ${{ github.ref == 'refs/heads/main' }}
+
+  # ═══════════════════════════════════════════════════════════════════
+  #  STAGE 3 – STAGING & VERIFICATION  (quality gate)
+  # ═══════════════════════════════════════════════════════════════════
+  stage:
+    name: "Stage 3 – Staging & Verification"
+    runs-on: ubuntu-latest
+    needs: build
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        uses: ./.github/actions/ssh-deploy
+        with:
+          host:               ${{ secrets.STAGING_HOST }}
+          user:               ${{ secrets.STAGING_USER }}
+          ssh-key:            ${{ secrets.STAGING_SSH_KEY }}
+          docker-hub-username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          image-name:         motherhood-journey
+          image-tag:          ${{ needs.build.outputs.image_tag }}
+          env-file:           .env.staging
+          app-dir:            /opt/motherhood-journey
+
+      - name: Wait for healthy
+        uses: ./.github/actions/health-check
+        with:
+          host:        ${{ secrets.STAGING_HOST }}
+          port:        "8080"
+          scheme:      http
+          max-retries: "12"
+          interval:    "10"
+
+      - name: Smoke tests
+        uses: ./.github/actions/smoke-test
+        with:
+          base-url: http://${{ secrets.STAGING_HOST }}:8080
+
+      - name: Mark staging verified
+        run: |
+          echo "STAGING_VERIFIED=true" >> $GITHUB_ENV
+          echo "### Staging Verified"                       >> $GITHUB_STEP_SUMMARY
+          echo "All health checks and smoke tests passed."  >> $GITHUB_STEP_SUMMARY
+
+  # ═══════════════════════════════════════════════════════════════════
+  #  STAGE 4 – PRODUCTION DEPLOY
+  #  Runs ONLY when:
+  #    1. Branch is main
+  #    2. Staging job result is explicitly 'success'
+  #    3. Human reviewer approves via GitHub environment rule
+  # ═══════════════════════════════════════════════════════════════════
+  deploy:
+    name: "Stage 4 – Production Deploy"
+    runs-on: ubuntu-latest
+    needs: stage
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.stage.result == 'success'
+    environment:
+      name: production
+      url: https://yourdomain.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        uses: ./.github/actions/ssh-deploy
+        with:
+          host:                ${{ secrets.PROD_HOST }}
+          user:                ${{ secrets.PROD_USER }}
+          ssh-key:             ${{ secrets.PROD_SSH_KEY }}
+          docker-hub-username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          image-name:          motherhood-journey
+          image-tag:           ${{ needs.build.outputs.image_tag }}
+          env-file:            .env
+          app-dir:             /opt/motherhood-journey
+
+      - name: Verify production health
+        uses: ./.github/actions/health-check
+        with:
+          host:        ${{ secrets.PROD_HOST }}
+          port:        "443"
+          scheme:      https
+          max-retries: "6"
+          interval:    "15"
+
+      - name: Deployment summary
+        run: |
+          echo "### Production Deployment Complete"                                            >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.DOCKER_IMAGE }}:${{ needs.build.outputs.image_tag }}\`"  >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** \`${{ needs.build.outputs.image_digest }}\`"                      >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production"                                                   >> $GITHUB_STEP_SUMMARY

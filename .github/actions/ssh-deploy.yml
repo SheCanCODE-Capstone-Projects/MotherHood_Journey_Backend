@@ -1,0 +1,83 @@
+name: SSH Deploy
+description: >
+  Opens an SSH connection to a remote server, pulls the exact
+  SHA-tagged image from Docker Hub, and brings up the stack with
+  docker compose. Works for both staging and production — the
+  caller controls which host, key, env-file, and app directory
+  to use. Never pulls 'latest'; always uses the explicit tag
+  produced by the build job.
+
+inputs:
+  host:
+    description: Hostname or IP of the target server
+    required: true
+  user:
+    description: SSH username on the target server
+    required: true
+  ssh-key:
+    description: Private SSH key (PEM, from secrets)
+    required: true
+  docker-hub-username:
+    description: Docker Hub username (to form the image reference)
+    required: true
+  image-name:
+    description: Docker image name without registry prefix, e.g. motherhood-journey
+    required: true
+  image-tag:
+    description: Exact image tag to pull (short SHA from build job output)
+    required: true
+  env-file:
+    description: Name of the env file on the server, e.g. .env or .env.staging
+    required: true
+  app-dir:
+    description: Absolute path to the app directory on the server
+    required: true
+    default: /opt/motherhood-journey
+
+runs:
+  using: composite
+  steps:
+    - name: Deploy via SSH
+      shell: bash
+      env:
+        SSH_KEY:             ${{ inputs.ssh-key }}
+        REMOTE_HOST:         ${{ inputs.host }}
+        REMOTE_USER:         ${{ inputs.user }}
+        DOCKER_HUB_USERNAME: ${{ inputs.docker-hub-username }}
+        IMAGE_NAME:          ${{ inputs.image-name }}
+        IMAGE_TAG:           ${{ inputs.image-tag }}
+        ENV_FILE:            ${{ inputs.env-file }}
+        APP_DIR:             ${{ inputs.app-dir }}
+      run: |
+        # Write key to temp file with strict permissions
+        KEY_FILE=$(mktemp)
+        echo "$SSH_KEY" > "$KEY_FILE"
+        chmod 600 "$KEY_FILE"
+
+        ssh -o StrictHostKeyChecking=no \
+            -o BatchMode=yes \
+            -i "$KEY_FILE" \
+            "$REMOTE_USER@$REMOTE_HOST" \
+            DOCKER_HUB_USERNAME="$DOCKER_HUB_USERNAME" \
+            IMAGE_NAME="$IMAGE_NAME" \
+            IMAGE_TAG="$IMAGE_TAG" \
+            ENV_FILE="$ENV_FILE" \
+            APP_DIR="$APP_DIR" \
+            bash -s << 'REMOTE'
+          set -euo pipefail
+
+          FULL_IMAGE="${DOCKER_HUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+          echo "Pulling image: $FULL_IMAGE"
+          docker pull "$FULL_IMAGE"
+
+          echo "Deploying stack from $APP_DIR using $ENV_FILE"
+          cd "$APP_DIR"
+
+          DOCKER_IMAGE_TAG="$IMAGE_TAG" \
+          docker compose --env-file "$ENV_FILE" up -d --no-build
+
+          echo "Deploy complete: $FULL_IMAGE"
+        REMOTE
+
+        # Clean up key from runner filesystem
+        rm -f "$KEY_FILE"
