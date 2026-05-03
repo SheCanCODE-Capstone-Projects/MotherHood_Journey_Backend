@@ -1,11 +1,11 @@
 server:
-  port: 8080
+  port: ${APP_PORT}
 
 spring:
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -14,8 +14,6 @@ spring:
 
   jpa:
     hibernate:
-      # Use 'validate' in production — Flyway owns the schema
-      # Use 'none' temporarily while fixing entity issues
       ddl-auto: validate
     properties:
       hibernate:
@@ -39,13 +37,13 @@ spring:
 
 # JWT configuration
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production-minimum-32-chars}
-  expiration: ${JWT_EXPIRATION_TIME}  # 15 minutes in milliseconds
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
 
 # Africa's Talking SMS
 africas-talking:
-  api-key: ${AT_API_KEY:sandbox-api-key}
-  username: ${AT_USERNAME:sandbox}
+  api-key: ${AT_API_KEY}
+  username: ${AT_USERNAME}
 
 # Logging
 logging:
