@@ -1,0 +1,65 @@
+name: Smoke Test
+description: >
+  Runs a fixed set of HTTP assertions against a deployed
+  application to verify the core API surface is reachable.
+  Each check validates that an endpoint returns the expected
+  HTTP status. A 4xx on a public endpoint is a pass — it means
+  the app is up and routing correctly. A 5xx or connection
+  failure is always a fail.
+  Currently validates:
+    GET  /actuator/health  → 200
+    GET  /actuator/info    → 200
+    POST /api/v1/auth/login (no body) → 400 (not 5xx)
+
+inputs:
+  base-url:
+    description: >
+      Base URL of the deployed application including scheme and
+      port, e.g. http://staging.host:8080 or https://yourdomain.com
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run smoke tests
+      shell: bash
+      env:
+        BASE_URL: ${{ inputs.base-url }}
+      run: |
+        PASSED=0
+        FAILED=0
+
+        check() {
+          local method="$1"
+          local endpoint="$2"
+          local expected="$3"
+          local url="${BASE_URL}${endpoint}"
+
+          actual=$(curl -sk -o /dev/null -w "%{http_code}" \
+            -X "$method" "$url" || echo "000")
+
+          if [ "$actual" = "$expected" ]; then
+            echo "  PASS  $method $endpoint  →  HTTP $actual"
+            PASSED=$((PASSED + 1))
+          else
+            echo "  FAIL  $method $endpoint  →  HTTP $actual  (expected $expected)"
+            FAILED=$((FAILED + 1))
+          fi
+        }
+
+        echo "Running smoke tests against $BASE_URL"
+        echo "──────────────────────────────────────────"
+
+        check GET  /actuator/health    200
+        check GET  /actuator/info      200
+        check POST /api/v1/auth/login  400   # no body → 400, not 5xx
+
+        echo "──────────────────────────────────────────"
+        echo "Results: $PASSED passed, $FAILED failed"
+
+        if [ "$FAILED" -gt 0 ]; then
+          echo "Smoke tests FAILED. Blocking deployment."
+          exit 1
+        fi
+
+        echo "All smoke tests passed."
