@@ -1,13 +1,13 @@
 package com.motherhood.journey.geo.service;
 
-import com.motherhood.journey.geo.repository.GeoLocationRepository;
+import com.motherhood.journey.geo.repository.GeoRepository;
 import org.springframework.stereotype.Service;
 
 @Service
-public class GeoServiceImpl implements GeoLocationService {
-    private final GeoLocationRepository geoLocationRepository;
+public class GeoServiceImpl implements GeoService {
+    private final GeoRepository geoRepository;
 
-    public GeoServiceImpl(GeoLocationRepository geoLocationRepository) {
-        this.geoLocationRepository = geoLocationRepository;
+    public GeoServiceImpl(GeoRepository geoRepository) {
+        this.geoRepository = geoRepository;
     }
 }

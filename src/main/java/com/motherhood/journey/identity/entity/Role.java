@@ -1,3 +1,5 @@
 package com.motherhood.journey.identity.entity;
 
-public class GovernmentUser {}
+public class Role {
+    private String id;
+}

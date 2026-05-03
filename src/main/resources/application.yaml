@@ -6,24 +6,51 @@ spring:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
     password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
   jpa:
     hibernate:
+      # Use 'validate' in production — Flyway owns the schema
+      # Use 'none' temporarily while fixing entity issues
       ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+    show-sql: false
+    open-in-view: false
+
   flyway:
     enabled: true
     locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
 
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+# JWT configuration
 jwt:
-  secret: ${JWT_SECRET}
-  expiration: 900000
+  secret: ${JWT_SECRET:your-256-bit-secret-key-change-in-production-minimum-32-chars}
+  expiration: ${JWT_EXPIRATION_TIME}  # 15 minutes in milliseconds
 
+# Africa's Talking SMS
 africas-talking:
-  api-key: ${AT_API_KEY}
-  username: ${AT_USERNAME}
+  api-key: ${AT_API_KEY:sandbox-api-key}
+  username: ${AT_USERNAME:sandbox}
 
+# Logging
 logging:
   level:
-    com.motherhood: INFO
+    com.motherhood: DEBUG
+    org.springframework.security: INFO
+    org.flywaydb: INFO
+    org.hibernate.SQL: INFO
