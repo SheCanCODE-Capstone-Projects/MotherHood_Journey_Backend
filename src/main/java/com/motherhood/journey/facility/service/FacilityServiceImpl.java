@@ -1,6 +1,7 @@
 package com.motherhood.journey.facility.service;
 
 import com.motherhood.journey.common.exception.CustomException;
+import com.motherhood.journey.security.FacilityScope;
 import com.motherhood.journey.facility.dto.request.CreateFacilityRequest;
 import com.motherhood.journey.facility.dto.request.UpdateFacilityRequest;
 import com.motherhood.journey.facility.dto.response.FacilityResponse;
@@ -40,8 +41,10 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
-    public FacilityResponse getFacilityById(Long id) {
+    public FacilityResponse getFacilityById(Long facilityId) {
+        Long id = facilityId;
         Facility facility = facilityRepository.findById(id)
             .orElseThrow(() -> new CustomException("Facility not found with ID: " + id, HttpStatus.NOT_FOUND));
         return mapToResponse(facility);
@@ -57,6 +60,7 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByDistrict(String district) {
         return facilityRepository.findByDistrict(district)
@@ -66,6 +70,7 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByType(FacilityType type) {
         return facilityRepository.findByType(type)
@@ -75,6 +80,7 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByDistrictAndType(String district, FacilityType type) {
         return facilityRepository.findByDistrictAndType(district, type)
