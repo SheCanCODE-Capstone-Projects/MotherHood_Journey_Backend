@@ -27,7 +27,7 @@ public class AuditAspect {
 
     private final AuditService auditService;
 
-    @Around("@annotation(com.motherhood.shared.audit.AuditedResource)")
+    @Around("@annotation(com.motherhood.journey.common.audit.AuditedResource)")
     public Object auditMethod(ProceedingJoinPoint joinPoint) throws Throwable {
 
         // 1 — Run the actual method first

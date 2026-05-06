@@ -12,48 +12,89 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuditService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuditService.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuditService.class);
 
     private final AuditLogRepository auditLogRepository;
 
-    // Simple 4-arg version (used by JwtAuthFilter)
+    /**
+     * Basic audit log (used in filters like JwtAuthFilter)
+     */
     @Async
-    public void log(String action, String detail, String path, String traceId) {
+    public void logBasic(String action, String detail, String path, String traceId) {
         try {
             AuditLog entry = AuditLog.builder()
                     .action(action)
-                    .detail(detail)
-                    .path(path)
-                    .traceId(traceId)
+                    // store the human-readable detail in failReason
+                    .failReason(detail)
+                    .ipAddress(null)
+                    .user(null)
                     .build();
+
             auditLogRepository.save(entry);
+
         } catch (Exception e) {
-            log.error("Failed to write audit log entry: action={} traceId={}", action, traceId, e);
+            logger.error("Failed to write basic audit log: action={}, traceId={}", action, traceId, e);
         }
     }
 
-    // Full 9-arg version (used by AuditAspect)
+    /**
+     * Full audit log (used in aspects like AuditAspect)
+     */
     @Async
-    public void log(String action, String resourceType, String resourceId,
-                    String performedBy, String facilityId,
-                    String clientIp, String userAgent,
-                    String path, String traceId) {
+    public void logFull(String action,
+                        String resourceType,
+                        String resourceId,
+                        String performedBy,
+                        String facilityId,
+                        String clientIp,
+                        String userAgent,
+                        String path,
+                        String traceId) {
         try {
+            java.util.UUID resUuid = null;
+            if (resourceId != null) {
+                try {
+                    resUuid = java.util.UUID.fromString(resourceId);
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+
             AuditLog entry = AuditLog.builder()
                     .action(action)
                     .resourceType(resourceType)
-                    .resourceId(resourceId)
-                    .performedBy(performedBy)
-                    .facilityId(facilityId)
-                    .clientIp(clientIp)
+                    .resourceId(resUuid)
+                    .ipAddress(clientIp)
                     .userAgent(userAgent)
-                    .path(path)
-                    .traceId(traceId)
+                    .user(null)
                     .build();
+
             auditLogRepository.save(entry);
+
         } catch (Exception e) {
-            log.error("Failed to write audit log: action={} resource={}/{} by={}",
-                    action, resourceType, resourceId, performedBy, e);
+            logger.error(
+                    "Failed to write full audit log: action={}, resource={}/{}, performedBy={}",
+                    action, resourceType, resourceId, performedBy, e
+            );
         }
+    }
+
+    // Backwards-compatible log overload used across the codebase
+    @Async
+    public void log(String action, String detail, String path, String traceId) {
+        logBasic(action, detail, path, traceId);
+    }
+
+    // Full log overload matching older call sites (keeps the async behaviour)
+    @Async
+    public void log(String action,
+                    String resourceType,
+                    String resourceId,
+                    String performedBy,
+                    String facilityId,
+                    String clientIp,
+                    String userAgent,
+                    String path,
+                    String traceId) {
+        logFull(action, resourceType, resourceId, performedBy, facilityId, clientIp, userAgent, path, traceId);
     }
 }
