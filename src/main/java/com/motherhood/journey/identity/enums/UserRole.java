@@ -10,5 +10,15 @@ public enum UserRole {
     FACILITY_ADMIN,
     DISTRICT_OFFICER,
     GOVERNMENT_ANALYST,
-    MOH_ADMIN
+    MOH_ADMIN;
+
+    public String toGrantedAuthority() {
+        return "ROLE_" + this.name();
+    }
+    public boolean isGovernmentRole() {
+        return this == DISTRICT_OFFICER
+                || this == GOVERNMENT_ANALYST
+                || this == MOH_ADMIN;
+    }
 }
+
