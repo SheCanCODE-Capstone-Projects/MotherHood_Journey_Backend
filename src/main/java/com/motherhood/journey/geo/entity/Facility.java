@@ -1,5 +1,6 @@
 package com.motherhood.journey.geo.entity;
 
+import com.motherhood.journey.geo.enums.FacilityType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -34,8 +35,10 @@ public class Facility {
     @Column(name = "facility_code", nullable = false, length = 32, unique = true)
     private String facilityCode;
 
+    // Changed from String to FacilityType enum
+    @Enumerated(EnumType.STRING)
     @Column(name = "facility_type", nullable = false, length = 32)
-    private String facilityType;
+    private FacilityType facilityType;
 
     @Column(nullable = false, length = 64)
     private String district;
