@@ -1,6 +1,5 @@
 package com.motherhood.journey.maternal.entity;
 
-import com.motherhood.journey.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -10,11 +9,8 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "pregnancies", indexes = {
-        @Index(name = "idx_pregnancy_mother", columnList = "mother_id"),
-        @Index(name = "idx_pregnancy_chw", columnList = "assigned_chw_id"),
-        @Index(name = "idx_pregnancy_status", columnList = "status")
-})
+@Table(
+        name = "pregnancies")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,43 +20,45 @@ public class Pregnancy {
 
     @Id
     @UuidGenerator
-    @Column(columnDefinition = "UUID")
+    @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "mother_id", nullable = false)
-    private Mother mother;
+    // Fk to mothers table
+    @Column(name = "mother_id", nullable = false)
+    private UUID motherId;
 
     @Column(name = "lmp_date")
     private LocalDate lmpDate;
 
+    // LMP + 280 days
     @Column(name = "edd")
     private LocalDate edd;
 
-    @Column(nullable = false, length = 16)
+    // Active ,Delivered , Lost , Transferred
+
+    @Column(name = "status", nullable = false, length = 16)
     @Builder.Default
     private String status = "ACTIVE";
 
+    // Total number of pregnancies
+    @Column(name = "gravida")
     private Integer gravida;
 
+    // Number of previous live births
+    @Column(name = "para")
     private Integer para;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_chw_id")
-    private User assignedChw;
+    // Fk to users table
+    @Column(name = "assigned_chw_id")
+    private UUID assignedChwId;
 
     @Column(name = "outcome_notes", columnDefinition = "TEXT")
     private String outcomeNotes;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
 }

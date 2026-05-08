@@ -1,6 +1,7 @@
 package com.motherhood.journey.config;
 
-import com.motherhood.journey.security.rbac.Role;  // ← update this once you know the exact path
+import com.motherhood.journey.identity.enums.UserRole;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,29 +37,29 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/v1/mothers/**")
                         .hasAnyRole(
-                                Role.HEALTH_WORKER.name(),
-                                Role.FACILITY_ADMIN.name()
+                                UserRole.HEALTH_WORKER.name(),
+                                UserRole.FACILITY_ADMIN.name()
                         )
                         .requestMatchers("/api/v1/children/**")
                         .hasAnyRole(
-                                Role.HEALTH_WORKER.name(),
-                                Role.FACILITY_ADMIN.name()
+                                UserRole.HEALTH_WORKER.name(),
+                                UserRole.FACILITY_ADMIN.name()
                         )
                         .requestMatchers("/api/v1/appointments/**")
                         .hasAnyRole(
-                                Role.HEALTH_WORKER.name(),
-                                Role.FACILITY_ADMIN.name(),
-                                Role.PATIENT.name()
+                                UserRole.HEALTH_WORKER.name(),
+                                UserRole.FACILITY_ADMIN.name(),
+                               UserRole.PATIENT.name()
                         )
                         .requestMatchers("/api/v1/reports/**")
                         .hasAnyRole(
-                                Role.GOVERNMENT_ANALYST.name(),
-                                Role.MOH_ADMIN.name()
+                                UserRole.GOVERNMENT_ANALYST.name(),
+                                UserRole.MOH_ADMIN.name()
                         )
                         .requestMatchers("/api/v1/facilities/**")
                         .hasAnyRole(
-                                Role.FACILITY_ADMIN.name(),
-                                Role.MOH_ADMIN.name()
+                                UserRole.FACILITY_ADMIN.name(),
+                                UserRole.MOH_ADMIN.name()
                         )
                         .anyRequest().authenticated()
                 );

@@ -1,7 +1,7 @@
 package com.motherhood.journey.common.exception;
 
+import com.motherhood.journey.common.Service.AuditLogService;
 import com.motherhood.journey.common.dto.ErrorResponseDTO;
-import com.motherhood.journey.common.service.AuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +22,9 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    private final AuditService auditService;
+    private final AuditLogService auditService;
 
-    public GlobalExceptionHandler(AuditService auditService) {
+    public GlobalExceptionHandler(AuditLogService auditService) {
         this.auditService = auditService;
     }
 
