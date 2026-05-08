@@ -3,7 +3,9 @@ package com.motherhood.journey.government.entity;
 import com.motherhood.journey.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -36,8 +38,10 @@ public class GovernmentUser {
     private String employeeId;
 
     // Stored as UUID array in PostgreSQL
-    @Column(name = "scoped_geo_ids", columnDefinition = "UUID[]")
-    private UUID[] scopedGeoIds;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "scoped_geo_ids", columnDefinition = "uuid[]")
+    @Builder.Default
+    private UUID[] scopedGeoIds = new UUID[0];
 
     @Column(name = "can_export")
     @Builder.Default
