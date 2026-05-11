@@ -1,7 +1,8 @@
+
 package com.motherhood.journey.notification.service;
 
-import com.motherhood.journey.notification.dto.request.SendNotificationRequest;
-import com.motherhood.journey.notification.dto.response.NotificationResponse;
+import com.motherhood.journey.child.entity.VaccinationRecord;
 
 public interface NotificationService {
+    void enqueue(VaccinationRecord record);
 }
