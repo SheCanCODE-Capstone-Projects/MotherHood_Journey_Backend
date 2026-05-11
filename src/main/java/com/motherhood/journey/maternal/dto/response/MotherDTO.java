@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record MotherResponse(
+public record MotherDTO(
         UUID id,
         UUID userId,
         UUID facilityId,
