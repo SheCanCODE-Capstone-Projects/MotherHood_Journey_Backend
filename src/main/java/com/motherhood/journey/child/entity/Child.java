@@ -1,7 +1,7 @@
 package com.motherhood.journey.child.entity;
 
 
-import com.motherhood.journey.geo.entity.Facility;
+import com.motherhood.journey.facility.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 
 import com.motherhood.journey.maternal.entity.Mother;
@@ -18,7 +18,8 @@ import java.util.UUID;
         @Index(name = "idx_child_mother", columnList = "mother_id"),
         @Index(name = "idx_child_facility", columnList = "facility_id"),
         @Index(name = "idx_child_birth_cert", columnList = "birth_certificate_no", unique = true),
-        @Index(name = "idx_child_health_status", columnList = "health_status")
+        @Index(name = "idx_child_health_status", columnList = "health_status"),
+        @Index(name = "idx_child_health_id", columnList = "health_id", unique = true)
 })
 @Getter
 @Setter
@@ -31,6 +32,9 @@ public class Child {
     @UuidGenerator
     @Column(columnDefinition = "UUID")
     private UUID id;
+
+    @Column(name = "health_id", nullable = false, unique = true, length = 32)
+    private String healthId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "mother_id", nullable = false)

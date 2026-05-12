@@ -1,6 +1,6 @@
 package com.motherhood.journey.appointment.entity;
 
-import com.motherhood.journey.geo.entity.Facility;
+import com.motherhood.journey.facility.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
 import jakarta.persistence.*;

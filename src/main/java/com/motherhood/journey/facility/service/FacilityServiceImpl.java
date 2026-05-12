@@ -60,7 +60,6 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
-    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByDistrict(String district) {
         return facilityRepository.findByDistrict(district)
@@ -70,7 +69,6 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
-    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByType(FacilityType type) {
         return facilityRepository.findByType(type)
@@ -80,7 +78,6 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
-    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByDistrictAndType(String district, FacilityType type) {
         return facilityRepository.findByDistrictAndType(district, type)
