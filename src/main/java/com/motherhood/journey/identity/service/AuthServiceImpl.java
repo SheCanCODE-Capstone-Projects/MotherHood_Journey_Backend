@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 public class AuthServiceImpl implements AuthService {
 
@@ -27,7 +29,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByPhoneNumber(request.phoneNumber())
             .orElseThrow(() -> new CustomException("Invalid credentials", HttpStatus.UNAUTHORIZED));
@@ -40,7 +42,9 @@ public class AuthServiceImpl implements AuthService {
             throw new CustomException("Account is disabled", HttpStatus.FORBIDDEN);
         }
 
-        Long facilityId = user.getFacility() != null ? user.getFacility().getId() : null;
+        user.setLastLogin(java.time.LocalDateTime.now());
+
+        UUID facilityId = user.getFacility() != null ? user.getFacility().getId() : null;
         String token = jwtUtil.generateToken(user.getPhoneNumber(), user.getRole(), facilityId);
 
         return AuthResponse.of(token, user.getRole(), facilityId);

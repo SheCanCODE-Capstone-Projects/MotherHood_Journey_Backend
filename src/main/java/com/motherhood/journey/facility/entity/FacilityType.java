@@ -4,6 +4,6 @@ public enum FacilityType {
     HOSPITAL,
     HEALTH_CENTER,
     CLINIC,
-    DISPENSARY
+    DISPENSARY,
+    POSTE_DE_SANTE
 }
-

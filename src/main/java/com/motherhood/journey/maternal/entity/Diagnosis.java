@@ -31,7 +31,7 @@ public class Diagnosis {
     @Column(name = "icd10_code", nullable = false, length = 8)
     private String icd10Code;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 255)
     private String description;
 
     @Column(length = 16)

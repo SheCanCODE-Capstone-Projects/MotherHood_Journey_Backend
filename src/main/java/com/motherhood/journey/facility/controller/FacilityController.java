@@ -7,17 +7,21 @@ import com.motherhood.journey.facility.dto.response.FacilityResponse;
 import com.motherhood.journey.facility.entity.FacilityType;
 import com.motherhood.journey.facility.service.FacilityService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.UUID;
 
-/**
- * REST Controller for Facility management
- * Handles all facility-related endpoints
- */
 @RestController
 @RequestMapping("/api/v1/facilities")
+@Validated
 public class FacilityController {
 
     private final FacilityService facilityService;
@@ -26,73 +30,52 @@ public class FacilityController {
         this.facilityService = facilityService;
     }
 
-    /**
-     * Create a new facility
-     * POST /api/v1/facilities
-     */
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<FacilityResponse> createFacility(@Valid @RequestBody CreateFacilityRequest request) {
-        return ApiResponse.success(facilityService.createFacility(request), "Facility created successfully");
+    @PreAuthorize("hasRole('MOH_ADMIN')")
+    public ResponseEntity<ApiResponse<FacilityResponse>> createFacility(
+        @Valid @RequestBody CreateFacilityRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success(facilityService.createFacility(request), "Facility created successfully"));
     }
 
     /**
-     * Get all facilities
-     * GET /api/v1/facilities
-     *
-     * Optional query parameters:
-     * - district: filter by district
-     * - type: filter by facility type
+     * Public facility listing — used by frontend facility picker.
+     * Returns only active facilities, paginated. No PHI exposed.
      */
     @GetMapping
-    public ApiResponse<List<FacilityResponse>> getAllFacilities(
-        @RequestParam(required = false) String district,
-        @RequestParam(required = false) FacilityType type
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Page<FacilityResponse>>> getFacilities(
+        @RequestParam(required = false) @Size(max = 64) String district,
+        @RequestParam(required = false) FacilityType facilityType,
+        @PageableDefault(size = 20, sort = "name") Pageable pageable
     ) {
-        List<FacilityResponse> facilities;
-
-        if (district != null && type != null) {
-            facilities = facilityService.getFacilitiesByDistrictAndType(district, type);
-        } else if (district != null) {
-            facilities = facilityService.getFacilitiesByDistrict(district);
-        } else if (type != null) {
-            facilities = facilityService.getFacilitiesByType(type);
-        } else {
-            facilities = facilityService.getAllFacilities();
-        }
-
-        return ApiResponse.success(facilities, "Facilities retrieved successfully");
+        return ResponseEntity.ok(
+            ApiResponse.success(facilityService.getFacilities(district, facilityType, pageable),
+                "Facilities retrieved successfully"));
     }
 
-    /**
-     * Get facility by ID
-     * GET /api/v1/facilities/{id}
-     */
     @GetMapping("/{id}")
-    public ApiResponse<FacilityResponse> getFacilityById(@PathVariable Long id) {
-        return ApiResponse.success(facilityService.getFacilityById(id), "Facility retrieved successfully");
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<FacilityResponse>> getFacilityById(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+            ApiResponse.success(facilityService.getFacilityById(id), "Facility retrieved successfully"));
     }
 
-    /**
-     * Update facility
-     * PUT /api/v1/facilities/{id}
-     */
     @PutMapping("/{id}")
-    public ApiResponse<FacilityResponse> updateFacility(
-        @PathVariable Long id,
+    @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN')")
+    public ResponseEntity<ApiResponse<FacilityResponse>> updateFacility(
+        @PathVariable UUID id,
         @Valid @RequestBody UpdateFacilityRequest request
     ) {
-        return ApiResponse.success(facilityService.updateFacility(id, request), "Facility updated successfully");
+        return ResponseEntity.ok(
+            ApiResponse.success(facilityService.updateFacility(id, request), "Facility updated successfully"));
     }
 
-    /**
-     * Delete facility
-     * DELETE /api/v1/facilities/{id}
-     */
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteFacility(@PathVariable Long id) {
+    @PreAuthorize("hasRole('MOH_ADMIN')")
+    public ResponseEntity<Void> deleteFacility(@PathVariable UUID id) {
         facilityService.deleteFacility(id);
+        return ResponseEntity.noContent().build();
     }
 }
-

@@ -4,49 +4,15 @@ import com.motherhood.journey.facility.dto.request.CreateFacilityRequest;
 import com.motherhood.journey.facility.dto.request.UpdateFacilityRequest;
 import com.motherhood.journey.facility.dto.response.FacilityResponse;
 import com.motherhood.journey.facility.entity.FacilityType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
+import java.util.UUID;
 
 public interface FacilityService {
-
-    /**
-     * Create a new facility
-     */
     FacilityResponse createFacility(CreateFacilityRequest request);
-
-    /**
-     * Get facility by ID
-     */
-    FacilityResponse getFacilityById(Long id);
-
-    /**
-     * Get all facilities
-     */
-    List<FacilityResponse> getAllFacilities();
-
-    /**
-     * Get facilities by district
-     */
-    List<FacilityResponse> getFacilitiesByDistrict(String district);
-
-    /**
-     * Get facilities by type
-     */
-    List<FacilityResponse> getFacilitiesByType(FacilityType type);
-
-    /**
-     * Get facilities by district and type
-     */
-    List<FacilityResponse> getFacilitiesByDistrictAndType(String district, FacilityType type);
-
-    /**
-     * Update facility
-     */
-    FacilityResponse updateFacility(Long id, UpdateFacilityRequest request);
-
-    /**
-     * Delete facility
-     */
-    void deleteFacility(Long id);
+    FacilityResponse getFacilityById(UUID id);
+    Page<FacilityResponse> getFacilities(String district, FacilityType facilityType, Pageable pageable);
+    FacilityResponse updateFacility(UUID id, UpdateFacilityRequest request);
+    void deleteFacility(UUID id);
 }
-

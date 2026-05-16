@@ -34,7 +34,7 @@ public class SmsNotification {
     @Column(name = "phone_number", nullable = false, length = 20)
     private String phoneNumber;
 
-    @Column(name = "message_body", nullable = false, length = 32)
+    @Column(name = "message_body", nullable = false, columnDefinition = "TEXT")
     private String messageBody;
 
     @Column(name = "notification_type", nullable = false, length = 32)

@@ -1,24 +1,30 @@
 package com.motherhood.journey.facility.dto.request;
 
-import com.motherhood.journey.facility.entity.FacilityType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
+import java.util.UUID;
 
 public record CreateFacilityRequest(
     @NotBlank(message = "Facility name is required")
+    @Size(max = 128)
     String name,
 
+    @NotBlank(message = "Facility code is required")
+    @Size(max = 32)
+    String facilityCode,
+
+    @NotBlank(message = "Facility type is required")
+    String facilityType,
+
     @NotBlank(message = "District is required")
+    @Size(max = 64)
     String district,
 
-    @NotBlank(message = "Province is required")
-    String province,
+    @Size(max = 20)
+    String phone,
 
-    @NotNull(message = "Facility type is required")
-    FacilityType type,
-
-    String phoneNumber,
-    Double latitude,
-    Double longitude
+    @NotNull(message = "Geo location is required")
+    UUID geoLocationId
 ) {}
-
