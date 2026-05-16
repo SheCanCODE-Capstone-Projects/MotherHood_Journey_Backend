@@ -1,0 +1,21 @@
+name: Java Setup
+description: >
+  Installs the requested JDK version (Temurin distribution) and
+  restores the Maven dependency cache. Use this in every job that
+  compiles or tests Java code so the cache is always warm.
+
+inputs:
+  java-version:
+    description: JDK version to install (e.g. "21")
+    required: true
+    default: "21"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK ${{ inputs.java-version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version:  ${{ inputs.java-version }}
+        distribution:  temurin
+        cache:         maven

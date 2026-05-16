@@ -1,3 +1,13 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "${env:JAVA_HOME}",
+      "default": true
+    }
+  ],
+  "java.compile.nullAnalysis.mode": "automatic",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "maven.executable.path": "${workspaceFolder}/mvnw",
+  "java.jdt.ls.java.home": "${env:JAVA_HOME}"
 }

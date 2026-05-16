@@ -1,58 +1,58 @@
-# Stage 1 — Build the application using Maven
-FROM maven:3.9.6-eclipse-temurin-21 AS builder
+#  Stage 1 – BUILD  (Maven + JDK 21, cached dependencies layer)
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 
-# Set working directory inside the container
-WORKDIR /app
+WORKDIR /build
 
-# Copy parent pom.xml first
+# Copy all POMs first → Docker caches dependency download layer
 COPY pom.xml .
+COPY infrastructure/pom.xml         infrastructure/pom.xml
+COPY shared-kernel/pom.xml          shared-kernel/pom.xml
+COPY modules/appointment/pom.xml    modules/appointment/pom.xml
+COPY modules/child/pom.xml          modules/child/pom.xml
+COPY modules/consent/pom.xml        modules/consent/pom.xml
+COPY modules/facility/pom.xml       modules/facility/pom.xml
+COPY modules/geo/pom.xml            modules/geo/pom.xml
+COPY modules/government/pom.xml     modules/government/pom.xml
+COPY modules/identity/pom.xml       modules/identity/pom.xml
+COPY modules/maternal/pom.xml       modules/maternal/pom.xml
+COPY modules/notification/pom.xml   modules/notification/pom.xml
+RUN mvn dependency:go-offline -q
 
-# Copy all module pom.xml files
-COPY app/pom.xml app/
-COPY shared-kernel/pom.xml shared-kernel/
-COPY infrastructure/pom.xml infrastructure/
-COPY modules/geo/pom.xml modules/geo/
-COPY modules/identity/pom.xml modules/identity/
-COPY modules/facility/pom.xml modules/facility/
-COPY modules/maternal/pom.xml modules/maternal/
-COPY modules/child/pom.xml modules/child/
-COPY modules/appointment/pom.xml modules/appointment/
-COPY modules/consent/pom.xml modules/consent/
-COPY modules/notification/pom.xml modules/notification/
-COPY modules/government/pom.xml modules/government/
+# Copy all sources and build the fat-jar (tests run in CI)
+COPY src           ./src
+COPY infrastructure ./infrastructure
+COPY shared-kernel  ./shared-kernel
+COPY modules        ./modules
+RUN mvn package -DskipTests -q
 
-# Download all dependencies first
-# This layer is cached — only re-runs if pom.xml files change
-RUN mvn dependency:go-offline -B
+#  Stage 2 – RUNTIME  (minimal JRE only – no Maven, no JDK)
 
-# Copy all source code
-COPY app/src app/src
-COPY shared-kernel/src shared-kernel/src
-COPY infrastructure/src infrastructure/src
-COPY modules/geo/src modules/geo/src
-COPY modules/identity/src modules/identity/src
-COPY modules/facility/src modules/facility/src
-COPY modules/maternal/src modules/maternal/src
-COPY modules/child/src modules/child/src
-COPY modules/appointment/src modules/appointment/src
-COPY modules/consent/src modules/consent/src
-COPY modules/notification/src modules/notification/src
-COPY modules/government/src modules/government/src
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
-# Build the jar — skip tests because CI already ran them
-RUN mvn package -DskipTests -B
+# Security: run as non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Stage 2 — Run the application using only Java
-FROM eclipse-temurin:21-jre-alpine
-
-# Set working directory
 WORKDIR /app
 
-# Copy the built jar from Stage 1
-COPY --from=builder /app/app/target/*.jar app.jar
+# Copy only the fat-jar from the builder stage
+COPY --from=builder /build/target/motherhood-journey-*.jar app.jar
 
-# Expose the port Spring Boot runs on
+# Ownership
+RUN chown appuser:appgroup app.jar
+
+USER appuser
+
+# Expose application port
 EXPOSE 8080
 
-# Start the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# ── JVM tuning: container-aware GC, fast startup ──────────────────
+ENV JAVA_OPTS="-XX:+UseContainerSupport \
+               -XX:MaxRAMPercentage=75.0 \
+               -XX:+UseG1GC \
+               -Djava.security.egd=file:/dev/./urandom"
+
+# ── Healthcheck (Docker built-in) ─────────────────────────────────
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

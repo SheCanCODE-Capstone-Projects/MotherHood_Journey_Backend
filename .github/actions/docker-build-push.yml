@@ -1,0 +1,82 @@
+name: Docker Build and Push
+description: >
+  Sets up Docker Buildx, authenticates to Docker Hub, generates
+  image tags (SHA + branch + optional latest), builds the
+  multi-stage Dockerfile with GHA layer cache, and pushes to
+  Docker Hub. Outputs the resolved tag and digest for downstream
+  jobs to consume.
+
+inputs:
+  image:
+    description: Full image name, e.g. myuser/my-app
+    required: true
+  docker-hub-username:
+    description: Docker Hub username (from secrets)
+    required: true
+  docker-hub-token:
+    description: Docker Hub access token (from secrets)
+    required: true
+  is-main:
+    description: Set to 'true' to also tag the image as latest
+    required: false
+    default: "false"
+  dockerfile:
+    description: Path to the Dockerfile
+    required: false
+    default: ./Dockerfile
+  platforms:
+    description: Target build platform(s)
+    required: false
+    default: linux/amd64
+
+outputs:
+  image_tag:
+    description: The primary image tag (short SHA)
+    value: ${{ steps.meta.outputs.version }}
+  image_digest:
+    description: The pushed image digest (sha256:...)
+    value: ${{ steps.push.outputs.digest }}
+
+runs:
+  using: composite
+  steps:
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ inputs.docker-hub-username }}
+        password: ${{ inputs.docker-hub-token }}
+
+    - name: Extract metadata (tags & labels)
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.image }}
+        tags: |
+          type=sha,prefix=sha-,format=short
+          type=ref,event=branch
+          type=raw,value=latest,enable=${{ inputs.is-main }}
+
+    - name: Build and push image
+      id: push
+      uses: docker/build-push-action@v5
+      with:
+        context:    .
+        file:       ${{ inputs.dockerfile }}
+        push:       true
+        tags:       ${{ steps.meta.outputs.tags }}
+        labels:     ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to:   type=gha,mode=max
+        platforms:  ${{ inputs.platforms }}
+
+    - name: Write image summary
+      shell: bash
+      run: |
+        echo "### Docker Image Published"                         >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** \`${{ inputs.image }}\`"               >> $GITHUB_STEP_SUMMARY
+        echo "**Tags:** \`${{ steps.meta.outputs.tags }}\`"     >> $GITHUB_STEP_SUMMARY
+        echo "**Digest:** \`${{ steps.push.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
