@@ -1,12 +1,18 @@
 package com.motherhood.journey.facility.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "facilities")
+@Table(name = "facilities", indexes = {
+    @Index(name = "idx_facility_district", columnList = "district"),
+    @Index(name = "idx_facility_type", columnList = "type"),
+    @Index(name = "idx_facility_district_type", columnList = "district, type")
+})
 public class Facility {
 
     @Id
@@ -15,15 +21,19 @@ public class Facility {
 
     // Setters
     @Setter
+    @NotBlank
     @Column(nullable = false)
     private String name;
 
+    @NotBlank
     @Column(nullable = false)
     private String district;
 
+    @NotBlank
     @Column(nullable = false)
     private String province;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FacilityType type;
@@ -49,6 +59,10 @@ public class Facility {
         this.phoneNumber = phoneNumber;
         this.latitude = latitude;
         this.longitude = longitude;
+    }
+
+    @PrePersist
+    protected void onCreate() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

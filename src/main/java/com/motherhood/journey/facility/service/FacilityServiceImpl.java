@@ -7,6 +7,7 @@ import com.motherhood.journey.facility.dto.response.FacilityResponse;
 import com.motherhood.journey.facility.entity.Facility;
 import com.motherhood.journey.facility.entity.FacilityType;
 import com.motherhood.journey.facility.repository.FacilityRepository;
+import com.motherhood.journey.security.FacilityScope;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,10 +41,11 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
-    public FacilityResponse getFacilityById(Long id) {
-        Facility facility = facilityRepository.findById(id)
-            .orElseThrow(() -> new CustomException("Facility not found with ID: " + id, HttpStatus.NOT_FOUND));
+    public FacilityResponse getFacilityById(Long facilityId) {
+        Facility facility = facilityRepository.findById(facilityId)
+            .orElseThrow(() -> new CustomException("Facility not found with ID: " + facilityId, HttpStatus.NOT_FOUND));
         return mapToResponse(facility);
     }
 
@@ -57,6 +59,7 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByDistrict(String district) {
         return facilityRepository.findByDistrict(district)
@@ -66,6 +69,7 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByType(FacilityType type) {
         return facilityRepository.findByType(type)
@@ -75,6 +79,7 @@ public class FacilityServiceImpl implements FacilityService {
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
     public List<FacilityResponse> getFacilitiesByDistrictAndType(String district, FacilityType type) {
         return facilityRepository.findByDistrictAndType(district, type)
