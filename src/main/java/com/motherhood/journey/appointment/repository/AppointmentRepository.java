@@ -12,6 +12,8 @@ import java.util.UUID;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
+
+    // fetch appointments in the 23h–25h window with reminder not yet sent
     @Query("""
             SELECT a FROM Appointment a
             JOIN FETCH a.facility
