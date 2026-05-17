@@ -1,8 +1,9 @@
-
 package com.motherhood.journey.notification.service;
 
 import com.motherhood.journey.child.entity.VaccinationRecord;
+import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.notification.entity.SmsNotification;
+import com.motherhood.journey.notification.enums.NotificationStatus;
 import com.motherhood.journey.notification.enums.NotificationType;
 import com.motherhood.journey.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,8 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class NotificationServiceImpl implements NotificationService {
+
+    static final int MAX_RETRIES = 3;
 
     private final NotificationRepository notificationRepository;
 
@@ -41,5 +44,34 @@ public class NotificationServiceImpl implements NotificationService {
 
         notificationRepository.save(sms);
         log.info("SMS enqueued for phone {} — vaccine: {}", phone, vaccine);
+    }
+
+    @Override
+    @Transactional
+    public void enqueueRaw(User recipient, String message, NotificationType type) {
+        SmsNotification sms = SmsNotification.builder()
+                .recipientUser(recipient)
+                .phoneNumber(recipient.getPhoneNumber())
+                .messageBody(message)
+                .notificationType(type.name())
+                .scheduledAt(LocalDateTime.now())
+                .build();
+
+        notificationRepository.save(sms);
+        log.info("SMS enqueued for phone {} — type: {}", recipient.getPhoneNumber(), type);
+    }
+
+    @Override
+    @Transactional
+    public void retry(SmsNotification sms) {
+        if (sms.getRetryCount() >= MAX_RETRIES) {
+            sms.setStatus(NotificationStatus.FAILED.name());
+            log.warn("SMS {} exceeded max retries — marked FAILED", sms.getId());
+        } else {
+            sms.setRetryCount(sms.getRetryCount() + 1);
+            sms.setStatus(NotificationStatus.QUEUED.name());
+            log.info("SMS {} retry attempt {}", sms.getId(), sms.getRetryCount());
+        }
+        notificationRepository.save(sms);
     }
 }
