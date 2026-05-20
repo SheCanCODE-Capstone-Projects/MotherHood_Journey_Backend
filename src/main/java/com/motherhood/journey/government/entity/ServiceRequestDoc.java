@@ -30,7 +30,7 @@ public class ServiceRequestDoc {
     @Column(name = "document_type", nullable = false, length = 32)
     private String documentType;
 
-    @Column(name = "file_path", nullable = false, length = 32)
+    @Column(name = "file_path", nullable = false, length = 255)
     private String filePath;
 
     @Column(name = "file_hash", nullable = false, length = 64)
