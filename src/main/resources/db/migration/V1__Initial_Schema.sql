@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS facilities (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_facility_code ON facilities (facility_code);
 CREATE INDEX IF NOT EXISTS        idx_facility_geo  ON facilities (geo_location_id);
+CREATE INDEX IF NOT EXISTS        idx_facility_district_type_active ON facilities (district, facility_type, active);
 
 -- ============================================================
 -- GROUP 3: USERS

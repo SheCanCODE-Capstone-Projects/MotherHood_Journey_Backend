@@ -1,163 +1,144 @@
 package com.motherhood.journey.appointment.service;
 
-import com.motherhood.journey.appointment.dto.request.CancelAppointmentRequest;
 import com.motherhood.journey.appointment.dto.request.CreateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.request.UpdateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.response.AppointmentResponse;
 import com.motherhood.journey.appointment.entity.Appointment;
-import com.motherhood.journey.appointment.enums.AppointmentStatus;
-import com.motherhood.journey.appointment.enums.AppointmentType;
 import com.motherhood.journey.appointment.repository.AppointmentRepository;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
-import com.motherhood.journey.geo.repository.FacilityRepository;
+import com.motherhood.journey.facility.repository.FacilityRepository;
 import com.motherhood.journey.geo.repository.GeoRepository;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import com.motherhood.journey.security.FacilityAuthDetails;
+import com.motherhood.journey.security.FacilityScope;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
+@Transactional
 public class AppointmentServiceImpl implements AppointmentService {
 
-    /** Max concurrent scheduled appointments per facility per 30-minute slot. */
-    private static final long CAPACITY_LIMIT = 10;
+    private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
 
     private final AppointmentRepository appointmentRepository;
     private final FacilityRepository facilityRepository;
     private final GeoRepository geoRepository;
     private final UserRepository userRepository;
 
-    @Override
-    @Transactional
-    public AppointmentResponse schedule(CreateAppointmentRequest request) {
-        Facility facility = facilityRepository.findById(request.facilityId())
-                .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
+    public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
+                                  FacilityRepository facilityRepository,
+                                  GeoRepository geoRepository,
+                                  UserRepository userRepository) {
+        this.appointmentRepository = appointmentRepository;
+        this.facilityRepository = facilityRepository;
+        this.geoRepository = geoRepository;
+        this.userRepository = userRepository;
+    }
 
-        // Capacity check — 30-minute window around requested time
-        LocalDateTime from = request.scheduledAt().minusMinutes(15);
-        LocalDateTime to   = request.scheduledAt().plusMinutes(15);
-        long count = appointmentRepository.countScheduledInWindow(facility.getId(), from, to);
-        if (count >= CAPACITY_LIMIT) {
-            throw new CustomException(
-                    "Facility has no capacity at the requested time. Please choose a different slot.",
-                    HttpStatus.CONFLICT);
+    @Override
+    public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isCrossFacility = auth.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(CROSS_FACILITY_ROLES::contains);
+
+        if (!isCrossFacility) {
+            UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd
+                ? fd.facilityId() : null;
+            if (jwtFacilityId == null || !jwtFacilityId.equals(request.facilityId())) {
+                throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
+            }
         }
 
-        GeoLocation geoLocation = request.geoLocationId() != null
-                ? geoRepository.findById(request.geoLocationId()).orElse(null)
-                : null;
+        Facility facility = facilityRepository.findById(request.facilityId())
+            .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
 
-        User healthWorker = request.healthWorkerId() != null
-                ? userRepository.findById(request.healthWorkerId()).orElse(null)
-                : null;
+        User healthWorker = null;
+        if (request.healthWorkerId() != null) {
+            healthWorker = userRepository.findById(request.healthWorkerId())
+                .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
+        }
 
-        AppointmentType type;
-        try {
-            type = AppointmentType.valueOf(request.appointmentType().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new CustomException("Invalid appointment type: " + request.appointmentType(), HttpStatus.BAD_REQUEST);
+        GeoLocation geoLocation = null;
+        if (request.geoLocationId() != null) {
+            geoLocation = geoRepository.findById(request.geoLocationId())
+                .orElseThrow(() -> new CustomException("GeoLocation not found", HttpStatus.NOT_FOUND));
         }
 
         Appointment appointment = Appointment.builder()
-                .patientRefId(request.patientRefId())
-                .patientType(request.patientType().toUpperCase())
-                .facility(facility)
-                .healthWorker(healthWorker)
-                .geoLocation(geoLocation)
-                .scheduledAt(request.scheduledAt())
-                .appointmentType(type)
-                .status(AppointmentStatus.SCHEDULED)
-                .notes(request.notes())
-                .build();
+            .patientRefId(request.patientRefId())
+            .patientType(request.patientType().name())
+            .facility(facility)
+            .healthWorker(healthWorker)
+            .geoLocation(geoLocation)
+            .scheduledAt(request.scheduledAt())
+            .appointmentType(request.appointmentType())
+            .notes(request.notes())
+            .build();
 
-        return toResponse(appointmentRepository.save(appointment));
+        return AppointmentResponse.from(appointmentRepository.save(appointment));
     }
 
     @Override
-    @Transactional
-    public AppointmentResponse cancel(UUID id, CancelAppointmentRequest request) {
-        Appointment appointment = findOrThrow(id);
-
-        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
-            throw new CustomException(
-                    "Only SCHEDULED appointments can be cancelled", HttpStatus.BAD_REQUEST);
-        }
-
-        appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointment.setCancellationReason(request.reason());
-        return toResponse(appointmentRepository.save(appointment));
-    }
-
-    @Override
-    @Transactional
-    public AppointmentResponse updateStatus(UUID id, UpdateAppointmentRequest request) {
-        Appointment appointment = findOrThrow(id);
-
-        AppointmentStatus newStatus;
-        try {
-            newStatus = AppointmentStatus.valueOf(request.status().toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new CustomException("Invalid status: " + request.status(), HttpStatus.BAD_REQUEST);
-        }
-
-        if (newStatus != AppointmentStatus.COMPLETED && newStatus != AppointmentStatus.NO_SHOW) {
-            throw new CustomException(
-                    "Health workers can only set status to COMPLETED or NO_SHOW", HttpStatus.BAD_REQUEST);
-        }
-
-        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
-            throw new CustomException(
-                    "Only SCHEDULED appointments can be updated", HttpStatus.BAD_REQUEST);
-        }
-
-        appointment.setStatus(newStatus);
-        if (request.notes() != null) appointment.setNotes(request.notes());
-        return toResponse(appointmentRepository.save(appointment));
-    }
-
-    @Override
+    @FacilityScope
     @Transactional(readOnly = true)
-    public AppointmentResponse getById(UUID id) {
-        return toResponse(findOrThrow(id));
+    public AppointmentResponse getAppointmentById(UUID id, UUID facilityId) {
+        return AppointmentResponse.from(findByIdAndFacility(id, facilityId));
     }
 
     @Override
+    @FacilityScope
     @Transactional(readOnly = true)
-    public List<AppointmentResponse> getByPatient(UUID patientRefId) {
-        return appointmentRepository.findByPatientRefId(patientRefId)
-                .stream().map(this::toResponse).toList();
+    public List<AppointmentResponse> getAppointmentsByFacility(UUID facilityId) {
+        return appointmentRepository.findByFacility_Id(facilityId).stream()
+            .map(AppointmentResponse::from)
+            .toList();
     }
 
-    // -------------------------------------------------------------------------
-
-    private Appointment findOrThrow(UUID id) {
-        return appointmentRepository.findById(id)
-                .orElseThrow(() -> new CustomException("Appointment not found", HttpStatus.NOT_FOUND));
+    @Override
+    @FacilityScope
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getAppointmentsByPatient(UUID patientRefId, String patientType, UUID facilityId) {
+        return appointmentRepository
+            .findByPatientRefIdAndPatientTypeAndFacility_Id(patientRefId, patientType, facilityId)
+            .stream().map(AppointmentResponse::from).toList();
     }
 
-    private AppointmentResponse toResponse(Appointment a) {
-        return new AppointmentResponse(
-                a.getId(),
-                a.getPatientRefId(),
-                a.getPatientType(),
-                a.getFacility().getId(),
-                a.getHealthWorker() != null ? a.getHealthWorker().getId() : null,
-                a.getScheduledAt(),
-                a.getAppointmentType().name(),
-                a.getStatus().name(),
-                a.getReminderSent(),
-                a.getNotes(),
-                a.getCancellationReason(),
-                a.getCreatedAt()
-        );
+    @Override
+    @FacilityScope
+    public AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request) {
+        Appointment appointment = findByIdAndFacility(id, facilityId);
+        if (request.scheduledAt() != null)    appointment.setScheduledAt(request.scheduledAt());
+        if (request.appointmentType() != null) appointment.setAppointmentType(request.appointmentType());
+        if (request.status() != null)         appointment.setStatus(request.status());
+        if (request.notes() != null)          appointment.setNotes(request.notes());
+        if (request.healthWorkerId() != null) {
+            User hw = userRepository.findById(request.healthWorkerId())
+                .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
+            appointment.setHealthWorker(hw);
+        }
+        return AppointmentResponse.from(appointment);
+    }
+
+    @Override
+    @FacilityScope
+    public void cancelAppointment(UUID id, UUID facilityId) {
+        findByIdAndFacility(id, facilityId).setStatus("CANCELLED");
+    }
+
+    private Appointment findByIdAndFacility(UUID id, UUID facilityId) {
+        return appointmentRepository.findByIdAndFacility_Id(id, facilityId)
+            .orElseThrow(() -> new CustomException("Appointment not found", HttpStatus.NOT_FOUND));
     }
 }

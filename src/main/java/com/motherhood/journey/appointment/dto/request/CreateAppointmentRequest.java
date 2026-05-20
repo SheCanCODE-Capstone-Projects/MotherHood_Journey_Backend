@@ -9,25 +9,25 @@ import java.util.UUID;
 
 public record CreateAppointmentRequest(
 
-        @NotNull(message = "Patient ID is required")
-        UUID patientRefId,
+    @NotNull(message = "Patient reference ID is required")
+    UUID patientRefId,
 
-        @NotBlank(message = "Patient type is required (MOTHER or CHILD)")
-        String patientType,
+    @NotNull(message = "Patient type is required")
+    com.motherhood.journey.maternal.enums.PatientType patientType,
 
-        @NotNull(message = "Facility ID is required")
-        UUID facilityId,
+    @NotNull(message = "Facility ID is required")
+    UUID facilityId,
 
-        UUID healthWorkerId,
+    UUID healthWorkerId,
 
-        UUID geoLocationId,
+    UUID geoLocationId,
 
-        @NotNull(message = "Scheduled datetime is required")
-        @Future(message = "Appointment must be scheduled in the future")
-        LocalDateTime scheduledAt,
+    @NotNull(message = "Scheduled date/time is required")
+    @Future(message = "Appointment must be scheduled in the future")
+    LocalDateTime scheduledAt,
 
-        @NotBlank(message = "Appointment type is required")
-        String appointmentType,
+    @NotBlank(message = "Appointment type is required")
+    String appointmentType,
 
-        String notes
+    String notes
 ) {}

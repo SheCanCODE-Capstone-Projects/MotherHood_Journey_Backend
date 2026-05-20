@@ -1,109 +1,80 @@
-
 package com.motherhood.journey.security;
 
-import com.motherhood.journey.identity.entity.User;
-import com.motherhood.journey.identity.repository.UserRepository;
-import com.motherhood.journey.common.Service.AuditLogService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
-@Slf4j
-@RequiredArgsConstructor
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    private static final String BEARER_PREFIX = "Bearer ";
-    private static final String RESOURCE_TYPE = "jwt_auth";
+    private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
-    private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository userRepository;
-    private final AuditLogService auditLogService;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService userDetailsService;
+    private final CacheManager cacheManager;
+
+    public JwtFilter(JwtUtil jwtUtil,
+                     CustomUserDetailsService userDetailsService,
+                     CacheManager cacheManager) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+        this.cacheManager = cacheManager;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
-
-        String token = extractToken(request);
-
-        if (token == null) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if (!jwtTokenProvider.validateToken(token)) {
-            logFailure(null, "Invalid or expired token", request);
-            filterChain.doFilter(request, response);
-            return;
-        }
-
+                                    FilterChain filterChain) throws ServletException, IOException {
         try {
-            String phoneNumber = jwtTokenProvider.getPhoneNumber(token);
-            UUID userId = jwtTokenProvider.getUserId(token);
+            String token = resolveToken(request);
+            if (token != null && jwtUtil.isTokenValid(token)) {
+                String phoneNumber = jwtUtil.extractPhoneNumber(token);
+                UUID facilityId = jwtUtil.extractFacilityId(token);
 
-            User user = userRepository.findById(userId)
-                    .orElse(null);
+                UserDetails userDetails = loadCached(phoneNumber);
 
-            if (user == null || !user.isActive() || !phoneNumber.equals(user.getPhoneNumber())) {
-                logFailure(userId, "User not found or inactive", request);
-                filterChain.doFilter(request, response);
-                return;
+                UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new FacilityAuthDetails(facilityId));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-
-            request.setAttribute("userId", user.getId());
-            request.setAttribute("facilityId", jwtTokenProvider.getFacilityId(token));
-            request.setAttribute("geoScopeIds", jwtTokenProvider.getGeoScopeIds(token));
-
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            user,
-                            null,
-                            List.of(new SimpleGrantedAuthority(user.getRole().toGrantedAuthority()))
-                    );
-
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(auth);
-
-        } catch (Exception e) {
-            logFailure(null, "Token processing error", request);
+        } catch (Exception ex) {
+            log.warn("JWT filter error: {}", ex.getMessage());
+            SecurityContextHolder.clearContext();
         }
-
         filterChain.doFilter(request, response);
     }
 
-    private String extractToken(HttpServletRequest request) {
-        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
-            return header.substring(BEARER_PREFIX.length());
+    private UserDetails loadCached(String phoneNumber) {
+        Cache cache = cacheManager.getCache("userDetails");
+        if (cache != null) {
+            UserDetails cached = cache.get(phoneNumber, UserDetails.class);
+            if (cached != null) return cached;
         }
-        return null;
+        UserDetails loaded = userDetailsService.loadUserByUsername(phoneNumber);
+        if (cache != null) cache.put(phoneNumber, loaded);
+        return loaded;
     }
 
-    private void logFailure(UUID userId, String reason, HttpServletRequest request) {
-        auditLogService.logFailure(
-                userId,
-                "AUTH",
-                RESOURCE_TYPE,
-                reason,
-                request.getRemoteAddr(),
-                request.getHeader(HttpHeaders.USER_AGENT)
-        );
+    private String resolveToken(HttpServletRequest request) {
+        String bearer = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
+            return bearer.substring(7);
+        }
+        return null;
     }
 }

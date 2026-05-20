@@ -1,8 +1,4 @@
 package com.motherhood.journey.geo.enums;
 
-public enum FacilityType {
-    HEALTH_CENTER,
-    HOSPITAL,
-    CLINIC,
-    CHW_POST
-}
+// REMOVED: duplicate FacilityType enum.
+// Use com.motherhood.journey.facility.entity.FacilityType everywhere.
