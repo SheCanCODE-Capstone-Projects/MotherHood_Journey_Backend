@@ -1,5 +1,6 @@
 package com.motherhood.journey.maternal.entity;
 
+import com.motherhood.journey.maternal.enums.DiagnosisSeverity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -9,8 +10,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "diagnoses", indexes = {
-        @Index(name = "idx_diag_visit", columnList = "visit_id"),
-        @Index(name = "idx_diag_icd10", columnList = "icd10_code")
+        @Index(name = "idx_diag_visit",  columnList = "visit_id"),
+        @Index(name = "idx_diag_icd10",  columnList = "icd10_code")
 })
 @Getter
 @Setter
@@ -28,16 +29,28 @@ public class Diagnosis {
     @JoinColumn(name = "visit_id", nullable = false)
     private HealthVisit visit;
 
+    /**
+     * ICD-10 code — validated against the seeded MoH HMIS subset
+     * in the service layer before persisting.
+     */
     @Column(name = "icd10_code", nullable = false, length = 8)
     private String icd10Code;
 
     @Column(nullable = false, length = 255)
     private String description;
 
+    /**
+     * MILD | MODERATE | SEVERE
+     */
+    @Enumerated(EnumType.STRING)
     @Column(length = 16)
-    private String severity;
+    private DiagnosisSeverity severity;
 
-    @Column(name = "is_primary")
+    /**
+     * Exactly one diagnosis per visit should be flagged true for
+     * analytics aggregation. Enforced in the service layer.
+     */
+    @Column(name = "is_primary", nullable = false)
     @Builder.Default
     private Boolean isPrimary = false;
 

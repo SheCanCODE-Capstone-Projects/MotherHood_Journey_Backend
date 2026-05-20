@@ -12,3 +12,4 @@ public enum Role {
     GOVERNMENT_ANALYST,
     MOH_ADMIN
 }
+

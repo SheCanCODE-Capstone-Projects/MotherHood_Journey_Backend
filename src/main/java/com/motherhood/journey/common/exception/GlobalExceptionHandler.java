@@ -1,17 +1,23 @@
 package com.motherhood.journey.common.exception;
 
+import com.motherhood.journey.common.dto.ErrorResponseDTO;
+import com.motherhood.journey.common.service.AuditService;
+import jakarta.servlet.http.HttpServletRequest;
 import com.motherhood.journey.common.dto.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import java.util.UUID;
 
@@ -58,16 +64,59 @@ public class GlobalExceptionHandler {
             .body(ApiResponse.error("Invalid value '" + safeValue + "' for parameter '" + safeName + "'"));
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<?>> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-            .body(ApiResponse.error("Access denied: insufficient facility permissions"));
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleUnauthorized(
+            UnauthorizedException ex,
+            HttpServletRequest request) {
+
+        String traceId = newTraceId();
+        log.warn("[{}] Authorisation denied – {} | path={}", traceId, ex.getMessage(), request.getRequestURI());
+        auditService.log("AUTHORISATION_DENIED", ex.getMessage(), request.getRequestURI(), traceId);
+
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .timestamp(Instant.now())
+                .traceId(traceId)
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
-    @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ApiResponse<?>> handleUsernameNotFoundException(UsernameNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(ApiResponse.error("Authentication failed"));
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponseDTO> handleValidation(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
+
+        String traceId = newTraceId();
+
+        Map<String, String> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        fe -> fe.getDefaultMessage() == null ? "invalid value" : fe.getDefaultMessage(),
+                        (first, second) -> first
+                ));
+
+        String firstMessage = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .orElse("Validation failed");
+
+        log.warn("[{}] Validation failed | path={} | errors={}", traceId, request.getRequestURI(), fieldErrors);
+        auditService.log("VALIDATION_FAILED", firstMessage, request.getRequestURI(), traceId);
+
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .timestamp(Instant.now())
+                .traceId(traceId)
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(firstMessage)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(Exception.class)
