@@ -13,7 +13,21 @@ import java.util.UUID;
 public class AuditLogService {
 
     private final JdbcTemplate jdbc;
-
+    // called by GlobalExceptionHandler
+    public void log(String action, String detail, String path, String traceId) {
+        try {
+            jdbc.update(
+                    """
+                    INSERT INTO audit_log (action, detail, path, trace_id, created_at)
+                    VALUES (?, ?, ?, ?, NOW())
+                    """,
+                    action, detail, path, traceId
+            );
+        } catch (Exception e) {
+            log.error("Failed to write audit log: {}", e.getMessage());
+        }
+    }
+    // called by auth/security layer
     public void logFailure(UUID userId, String action, String resourceType,
                            String reason, String ip, String userAgent) {
         try {

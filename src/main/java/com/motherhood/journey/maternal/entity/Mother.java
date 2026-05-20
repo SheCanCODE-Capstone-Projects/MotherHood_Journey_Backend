@@ -4,6 +4,7 @@ package com.motherhood.journey.maternal.entity;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
+import com.motherhood.journey.maternal.enums.NidaVerifiedStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -47,8 +48,9 @@ public class Mother {
     private String healthId;
 
     @Column(name = "nida_verified_status", length = 16)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private String nidaVerifiedStatus = "PENDING";
+    private NidaVerifiedStatus nidaVerifiedStatus = NidaVerifiedStatus.PENDING;
 
     @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;

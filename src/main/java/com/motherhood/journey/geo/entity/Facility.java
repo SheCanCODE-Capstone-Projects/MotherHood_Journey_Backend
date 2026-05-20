@@ -1,6 +1,6 @@
 package com.motherhood.journey.geo.entity;
 
-import com.motherhood.journey.geo.enums.FacilityType;
+import com.motherhood.journey.facility.entity.FacilityType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;
@@ -10,8 +10,12 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "facilities", indexes = {
-        @Index(name = "idx_facility_code", columnList = "facility_code", unique = true),
-        @Index(name = "idx_facility_geo", columnList = "geo_location_id")
+        @Index(name = "idx_facility_code",                 columnList = "facility_code",           unique = true),
+        @Index(name = "idx_facility_geo",                  columnList = "geo_location_id"),
+        @Index(name = "idx_facility_district",             columnList = "district"),
+        @Index(name = "idx_facility_type",                 columnList = "facility_type"),
+        @Index(name = "idx_facility_active",               columnList = "active"),
+        @Index(name = "idx_facility_district_type_active", columnList = "district, facility_type, active")
 })
 @Getter
 @Setter
@@ -29,13 +33,12 @@ public class Facility {
     @JoinColumn(name = "geo_location_id", nullable = false)
     private GeoLocation geoLocation;
 
-    @Column(nullable = false, length = 32)
+    @Column(nullable = false, length = 128)
     private String name;
 
     @Column(name = "facility_code", nullable = false, length = 32, unique = true)
     private String facilityCode;
 
-    // Changed from String to FacilityType enum
     @Enumerated(EnumType.STRING)
     @Column(name = "facility_type", nullable = false, length = 32)
     private FacilityType facilityType;
