@@ -12,6 +12,11 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    /**
+     * Allowed origins are injected from CORS_ALLOWED_ORIGINS environment variable.
+     * The localhost default is for local development only — always set
+     * CORS_ALLOWED_ORIGINS in production (e.g. https://app.motherhood.rw).
+     */
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private List<String> allowedOrigins;
 

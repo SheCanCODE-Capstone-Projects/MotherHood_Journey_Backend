@@ -1,5 +1,6 @@
 package com.motherhood.journey.security;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,8 +53,11 @@ public class JwtFilter extends OncePerRequestFilter {
                 authentication.setDetails(new FacilityAuthDetails(facilityId));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        } catch (Exception ex) {
+        } catch (JwtException ex) {
             log.warn("JWT filter error: {}", ex.getMessage());
+            SecurityContextHolder.clearContext();
+        } catch (Exception ex) {
+            log.warn("Unexpected filter error: {}", ex.getMessage());
             SecurityContextHolder.clearContext();
         }
         filterChain.doFilter(request, response);

@@ -1,5 +1,6 @@
 package com.motherhood.journey.maternal.dto.request;
 
+import com.motherhood.journey.maternal.enums.VisitType;
 import jakarta.validation.constraints.*;
 
 import java.time.LocalDateTime;
@@ -9,8 +10,7 @@ public record UpdateHealthVisitRequest(
     @PastOrPresent(message = "Visit date cannot be in the future")
     LocalDateTime visitDatetime,
 
-    @Size(max = 32, message = "Visit type must not exceed 32 characters")
-    String visitType,
+    VisitType visitType,
 
     @Size(max = 500) String chiefComplaint,
 

@@ -1,6 +1,7 @@
 package com.motherhood.journey.identity.service;
 
 import com.motherhood.journey.common.exception.CustomException;
+import com.motherhood.journey.config.ProductionConfig;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.facility.repository.FacilityRepository;
@@ -24,15 +25,18 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final GeoRepository geoRepository;
     private final FacilityRepository facilityRepository;
+    private final ProductionConfig productionConfig;
 
     public UserServiceImpl(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
                            GeoRepository geoRepository,
-                           FacilityRepository facilityRepository) {
+                           FacilityRepository facilityRepository,
+                           ProductionConfig productionConfig) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.geoRepository = geoRepository;
         this.facilityRepository = facilityRepository;
+        this.productionConfig = productionConfig;
     }
 
     @Override
@@ -81,6 +85,11 @@ public class UserServiceImpl implements UserService {
         if (request.firstName() != null) user.setFirstName(request.firstName());
         if (request.lastName() != null) user.setLastName(request.lastName());
         if (request.preferredLanguage() != null) user.setPreferredLanguage(request.preferredLanguage());
+        // If the user is being deactivated, evict from cache immediately
+        if (request.active() != null && !request.active()) {
+            user.setActive(false);
+            productionConfig.evictUser(user.getPhoneNumber());
+        }
         return UserResponse.from(userRepository.save(user));
     }
 

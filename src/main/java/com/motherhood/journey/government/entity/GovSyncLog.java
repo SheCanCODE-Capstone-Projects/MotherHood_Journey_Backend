@@ -1,7 +1,6 @@
 package com.motherhood.journey.government.entity;
 
 import com.motherhood.journey.geo.entity.Facility;
-import com.motherhood.journey.government.entity.ServiceRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UuidGenerator;

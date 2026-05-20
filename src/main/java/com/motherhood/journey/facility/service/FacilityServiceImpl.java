@@ -9,22 +9,24 @@ import com.motherhood.journey.facility.repository.FacilityRepository;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.geo.repository.GeoRepository;
+import com.motherhood.journey.security.FacilityAuthDetails;
+import com.motherhood.journey.security.SecurityConstants;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional
 public class FacilityServiceImpl implements FacilityService {
 
-    private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
+    private static final java.util.Set<String> CROSS_FACILITY_ROLES = SecurityConstants.CROSS_FACILITY_ROLES;
 
     private final FacilityRepository facilityRepository;
     private final GeoRepository geoRepository;
@@ -36,9 +38,7 @@ public class FacilityServiceImpl implements FacilityService {
 
     @Override
     public FacilityResponse createFacility(CreateFacilityRequest request) {
-        // FACILITY_ADMIN can only create a facility they are assigned to.
-        // MOH_ADMIN can create any facility.
-        assertFacilityOwnershipOrMohAdmin(request.facilityId());
+        assertFacilityOwnershipOrMohAdmin(null);
 
         if (facilityRepository.findByFacilityCode(request.facilityCode()).isPresent()) {
             throw new CustomException("Facility code already exists", HttpStatus.CONFLICT);
@@ -66,11 +66,10 @@ public class FacilityServiceImpl implements FacilityService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Facility facility = findById(id);
         boolean isCrossFacility = auth.getAuthorities().stream()
-            .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+            .map(GrantedAuthority::getAuthority)
             .anyMatch(CROSS_FACILITY_ROLES::contains);
         if (!isCrossFacility) {
-            UUID jwtFacilityId = auth.getDetails() instanceof
-                com.motherhood.journey.security.FacilityAuthDetails fd ? fd.facilityId() : null;
+            UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd ? fd.facilityId() : null;
             if (jwtFacilityId == null || !jwtFacilityId.equals(facility.getId())) {
                 throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
             }
@@ -116,7 +115,7 @@ public class FacilityServiceImpl implements FacilityService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         // Only MOH_ADMIN can create new facilities
         boolean isMohAdmin = auth.getAuthorities().stream()
-            .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+            .map(GrantedAuthority::getAuthority)
             .anyMatch("ROLE_MOH_ADMIN"::equals);
         if (!isMohAdmin) {
             throw new CustomException(
@@ -127,11 +126,10 @@ public class FacilityServiceImpl implements FacilityService {
     private void assertFacilityOwnership(UUID facilityId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isCrossFacility = auth.getAuthorities().stream()
-            .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+            .map(GrantedAuthority::getAuthority)
             .anyMatch(CROSS_FACILITY_ROLES::contains);
         if (isCrossFacility) return;
-        UUID jwtFacilityId = auth.getDetails() instanceof
-            com.motherhood.journey.security.FacilityAuthDetails fd ? fd.facilityId() : null;
+        UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd ? fd.facilityId() : null;
         if (jwtFacilityId == null || !jwtFacilityId.equals(facilityId)) {
             throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
         }

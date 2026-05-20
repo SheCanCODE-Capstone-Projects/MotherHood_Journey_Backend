@@ -1,7 +1,7 @@
 package com.motherhood.journey.security;
 
-import com.bucket4j.Bandwidth;
-import com.bucket4j.Bucket;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -83,7 +83,10 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
     private String resolveClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+            // Use the LAST entry — appended by the trusted Railway proxy.
+            // The first entry is user-controlled and can be spoofed.
+            String[] parts = forwarded.split(",");
+            return parts[parts.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

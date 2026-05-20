@@ -3,6 +3,7 @@ package com.motherhood.journey.config;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -33,6 +34,20 @@ public class ProductionConfig {
             .expireAfterWrite(1, TimeUnit.MINUTES)
             .maximumSize(500));
         return manager;
+    }
+
+    /**
+     * Immediately evicts a user's cached UserDetails entry.
+     * Call this whenever a user is deactivated or their role changes
+     * so the security context reflects the change on the next request
+     * rather than waiting for the 1-minute TTL to expire.
+     */
+    public void evictUser(String phoneNumber) {
+        Cache cache = cacheManager().getCache("userDetails");
+        if (cache != null) {
+            cache.evict(phoneNumber);
+            log.info("UserDetails cache evicted for user: [REDACTED]");
+        }
     }
 
     /**

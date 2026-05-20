@@ -1,18 +1,30 @@
 package com.motherhood.journey.common.exception;
 
+import com.motherhood.journey.common.dto.ErrorResponseDTO;
+import com.motherhood.journey.common.service.AuditService;
+import jakarta.servlet.http.HttpServletRequest;
 import com.motherhood.journey.common.dto.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ApiResponse<?>> handleCustomException(CustomException ex) {
@@ -21,6 +33,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<?>> handleValidationException(MethodArgumentNotValidException ex) {
+        // Field names and default messages come from annotations — safe to reflect
         String message = ex.getBindingResult().getFieldErrors().stream()
             .map(e -> e.getField() + ": " + e.getDefaultMessage())
             .reduce((a, b) -> a + "; " + b)
@@ -31,6 +44,7 @@ public class GlobalExceptionHandler {
     /** Handles @Validated constraint violations on @RequestParam / @PathVariable */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<?>> handleConstraintViolation(ConstraintViolationException ex) {
+        // Property paths and messages come from annotations — safe to reflect
         String message = ex.getConstraintViolations().stream()
             .map(v -> v.getPropertyPath() + ": " + v.getMessage())
             .reduce((a, b) -> a + "; " + b)
@@ -38,29 +52,88 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error("Validation error: " + message));
     }
 
-    /** Handles invalid enum values passed as @RequestParam (e.g. unknown FacilityType) */
+    /**
+     * Handles invalid enum values passed as @RequestParam (e.g. unknown FacilityType).
+     * ex.getValue() is user-supplied — sanitized before reflection to prevent log injection.
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiResponse<?>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        String message = "Invalid value '" + ex.getValue() + "' for parameter '" + ex.getName() + "'";
-        return ResponseEntity.badRequest().body(ApiResponse.error(message));
+        String safeValue = sanitize(String.valueOf(ex.getValue()));
+        String safeName  = sanitize(ex.getName());
+        return ResponseEntity.badRequest()
+            .body(ApiResponse.error("Invalid value '" + safeValue + "' for parameter '" + safeName + "'"));
     }
 
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiResponse<?>> handleAccessDeniedException(AccessDeniedException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-            .body(ApiResponse.error("Access denied: insufficient facility permissions"));
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleUnauthorized(
+            UnauthorizedException ex,
+            HttpServletRequest request) {
+
+        String traceId = newTraceId();
+        log.warn("[{}] Authorisation denied – {} | path={}", traceId, ex.getMessage(), request.getRequestURI());
+        auditService.log("AUTHORISATION_DENIED", ex.getMessage(), request.getRequestURI(), traceId);
+
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .timestamp(Instant.now())
+                .traceId(traceId)
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message(ex.getMessage())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
-    @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ApiResponse<?>> handleUsernameNotFoundException(UsernameNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-            .body(ApiResponse.error("Authentication failed"));
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponseDTO> handleValidation(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request) {
+
+        String traceId = newTraceId();
+
+        Map<String, String> fieldErrors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        FieldError::getField,
+                        fe -> fe.getDefaultMessage() == null ? "invalid value" : fe.getDefaultMessage(),
+                        (first, second) -> first
+                ));
+
+        String firstMessage = ex.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
+                .orElse("Validation failed");
+
+        log.warn("[{}] Validation failed | path={} | errors={}", traceId, request.getRequestURI(), fieldErrors);
+        auditService.log("VALIDATION_FAILED", firstMessage, request.getRequestURI(), traceId);
+
+        ErrorResponseDTO body = ErrorResponseDTO.builder()
+                .timestamp(Instant.now())
+                .traceId(traceId)
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(firstMessage)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<?>> handleGeneralException(Exception ex) {
-        // Never leak internal exception messages to the client
+        // Log internally with a correlation ID — never expose ex.getMessage() to the client
+        String correlationId = UUID.randomUUID().toString();
+        log.error("Unhandled exception [correlationId={}]: {}", correlationId, ex.getMessage(), ex);
         return ResponseEntity.internalServerError()
-            .body(ApiResponse.error("An unexpected error occurred. Please contact support."));
+            .body(ApiResponse.error("An unexpected error occurred. Reference: " + correlationId));
+    }
+
+    /**
+     * Strips newline and carriage-return characters from user-supplied strings
+     * before they are reflected into responses or logs, preventing log injection (CWE-117).
+     */
+    private String sanitize(String input) {
+        if (input == null) return "";
+        return input.replaceAll("[\r\n]", "").trim();
     }
 }

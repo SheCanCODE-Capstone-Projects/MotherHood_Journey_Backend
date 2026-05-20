@@ -1,6 +1,8 @@
 package com.motherhood.journey.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -71,7 +73,10 @@ public class JwtUtil {
     public boolean isTokenValid(String token) {
         try {
             return !extractClaim(token, Claims::getExpiration).before(new Date());
-        } catch (Exception e) {
+        } catch (ExpiredJwtException e) {
+            log.debug("JWT expired");
+            return false;
+        } catch (JwtException e) {
             log.warn("JWT validation failed: {}", e.getMessage());
             return false;
         }

@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface DiagnosisRepository extends JpaRepository<Diagnosis, UUID> {
     List<Diagnosis> findByVisit_Id(UUID visitId);
+    List<Diagnosis> findByVisit_IdIn(List<UUID> visitIds);
 }
