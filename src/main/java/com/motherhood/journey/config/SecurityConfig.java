@@ -1,75 +1,69 @@
 package com.motherhood.journey.config;
 
-import com.motherhood.journey.security.JwtFilter;
-import com.motherhood.journey.security.LoginRateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
-
-import java.util.Arrays;
+import com.motherhood.journey.identity.enums.UserRole;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter;
-    private final LoginRateLimitFilter loginRateLimitFilter;
     private final CorsConfigurationSource corsConfigurationSource;
-    private final Environment environment;
 
-    public SecurityConfig(JwtFilter jwtFilter,
-                          LoginRateLimitFilter loginRateLimitFilter,
-                          CorsConfigurationSource corsConfigurationSource,
-                          Environment environment) {
-        this.jwtFilter = jwtFilter;
-        this.loginRateLimitFilter = loginRateLimitFilter;
+    public SecurityConfig(CorsConfigurationSource corsConfigurationSource) {
         this.corsConfigurationSource = corsConfigurationSource;
-        this.environment = environment;
     }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        boolean isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod");
-
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource))
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> {
-                auth.requestMatchers("/api/v1/auth/**", "/actuator/health").permitAll();
-                if (!isProd) {
-                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
-                } else {
-                    auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("MOH_ADMIN");
-                }
-                auth.requestMatchers("/actuator/**").hasRole("MOH_ADMIN")
-                    .anyRequest().authenticated();
-            })
-            .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/geo/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**"
+                        ).permitAll()
+                        .requestMatchers("/api/v1/mothers/**")
+                        .hasAnyRole(
+                                UserRole.HEALTH_WORKER.name(),
+                                UserRole.FACILITY_ADMIN.name()
+                        )
+                        .requestMatchers("/api/v1/children/**")
+                        .hasAnyRole(
+                                UserRole.HEALTH_WORKER.name(),
+                                UserRole.FACILITY_ADMIN.name()
+                        )
+                        .requestMatchers("/api/v1/appointments/**")
+                        .hasAnyRole(
+                                UserRole.HEALTH_WORKER.name(),
+                                UserRole.FACILITY_ADMIN.name(),
+                                UserRole.PATIENT.name()
+                        )
+                        .requestMatchers("/api/v1/reports/**")
+                        .hasAnyRole(
+                                UserRole.GOVERNMENT_ANALYST.name(),
+                                UserRole.MOH_ADMIN.name()
+                        )
+                        .requestMatchers("/api/v1/facilities/**")
+                        .hasAnyRole(
+                                UserRole.FACILITY_ADMIN.name(),
+                                UserRole.MOH_ADMIN.name()
+                        )
+                        .anyRequest().authenticated()
+                );
+
 
         return http.build();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
     }
 }

@@ -1,25 +1,25 @@
 package com.motherhood.journey.notification.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+import com.motherhood.journey.notification.enums.NotificationType;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record SendNotificationRequest(
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class SendNotificationRequest {
 
-    @NotNull(message = "Recipient user ID is required")
-    UUID recipientUserId,
-
-    @NotBlank(message = "Phone number is required")
-    String phoneNumber,
-
-    @NotBlank(message = "Message body is required")
-    String messageBody,
-
-    @NotBlank(message = "Notification type is required")
-    String notificationType,
-
-    @NotNull(message = "Scheduled time is required")
-    LocalDateTime scheduledAt
-) {}
+	private UUID recipientUserId;
+	private String phoneNumber;
+	private String message;
+	private NotificationType notificationType;
+	private LocalDateTime scheduledAt;
+}
