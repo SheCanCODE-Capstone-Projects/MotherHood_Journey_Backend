@@ -1,8 +1,5 @@
 package com.motherhood.journey.common.dto;
 
-<<<<<<< Updated upstream
-public class ErrorResponseDTO {
-=======
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,5 +15,4 @@ public class ErrorResponseDTO {
     private int status;
     private String error;
     private String message;
->>>>>>> Stashed changes
 }

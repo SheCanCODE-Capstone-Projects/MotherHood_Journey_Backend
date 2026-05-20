@@ -1,19 +1,40 @@
 package com.motherhood.journey.maternal.repository;
 
 import com.motherhood.journey.maternal.entity.Mother;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Repository
 public interface MotherRepository extends JpaRepository<Mother, UUID> {
-    Optional<Mother> findByUserId(UUID userId);
-    boolean existsByHealthId(String healthId);
-    List<Mother> findByFacility_Id(UUID facilityId);
-    Optional<Mother> findByIdAndFacility_Id(UUID id, UUID facilityId);
 
-    @Query("SELECT m FROM Mother m WHERE m.geoLocation.sector = :sector AND m.facility.id = :facilityId")
-    List<Mother> findBySectorAndFacility(@Param("sector") String sector, @Param("facilityId") UUID facilityId);
+
+    Optional<Mother> findByUserId(UUID userId);
+
+    Optional<Mother> findByHealthId(String healthId);
+
+    List<Mother> findByFacilityId(UUID facilityId);
+
+    boolean existsByIdAndFacilityId(UUID motherId, UUID facilityId);
+
+    @Query("SELECT m FROM Mother m WHERE m.geoLocation.id IN :geoLocationIds")
+    List<Mother> findByGeoLocationIdIn(@Param("geoLocationIds") List<UUID> geoLocationIds);
+
+    @Query("SELECT COUNT(m) > 0 FROM Mother m " +
+            "WHERE m.id = :motherId " +
+            "AND m.geoLocation.id IN :geoLocationIds")
+    boolean existsByIdAndGeoLocationIdIn(
+            @Param("motherId") UUID motherId,
+            @Param("geoLocationIds") List<UUID> geoLocationIds);
+
+    boolean existsByUserId(@NotNull UUID uuid);
+
+    List<Mother> findByNidaVerifiedStatus(String nidaVerifiedStatus);
 }
