@@ -21,6 +21,7 @@ import com.motherhood.journey.maternal.entity.Mother;
 import com.motherhood.journey.maternal.repository.MotherRepository;
 import com.motherhood.journey.security.FacilityAuthDetails;
 import com.motherhood.journey.security.FacilityScope;
+import com.motherhood.journey.security.SecurityConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,17 +29,18 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 @Transactional
 public class ChildServiceImpl implements ChildService {
 
-    private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
+    private static final java.util.Set<String> CROSS_FACILITY_ROLES = SecurityConstants.CROSS_FACILITY_ROLES;
 
     private final ChildRepository childRepository;
     private final MotherRepository motherRepository;
@@ -129,19 +131,17 @@ public class ChildServiceImpl implements ChildService {
     @Override
     @FacilityScope
     @Transactional(readOnly = true)
-    public List<ChildResponse> getChildrenByMother(UUID motherId, UUID facilityId) {
-        return childRepository.findByMother_IdAndFacility_Id(motherId, facilityId).stream()
-            .map(this::toResponse)
-            .toList();
+    public Page<ChildResponse> getChildrenByMother(UUID motherId, UUID facilityId, Pageable pageable) {
+        return childRepository.findByMother_IdAndFacility_Id(motherId, facilityId, pageable)
+            .map(this::toResponse);
     }
 
     @Override
     @FacilityScope
     @Transactional(readOnly = true)
-    public List<ChildResponse> getChildrenByFacility(UUID facilityId) {
-        return childRepository.findByFacility_Id(facilityId).stream()
-            .map(this::toResponse)
-            .toList();
+    public Page<ChildResponse> getChildrenByFacility(UUID facilityId, Pageable pageable) {
+        return childRepository.findByFacility_Id(facilityId, pageable)
+            .map(this::toResponse);
     }
 
     @Override

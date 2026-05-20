@@ -19,6 +19,9 @@ import com.motherhood.journey.identity.repository.UserRepository;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.maternal.repository.MotherRepository;
 import com.motherhood.journey.security.FacilityAuthDetails;
+import com.motherhood.journey.security.SecurityConstants;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -37,7 +40,7 @@ import java.util.UUID;
 @Transactional
 public class ServiceRequestServiceImpl implements ServiceRequestService {
 
-    private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
+    private static final Set<String> CROSS_FACILITY_ROLES = SecurityConstants.CROSS_FACILITY_ROLES;
     private static final Set<ServiceRequestStatus> TERMINAL_STATUSES = Set.of(
         ServiceRequestStatus.APPROVED, ServiceRequestStatus.REJECTED, ServiceRequestStatus.COMPLETED);
 
@@ -49,6 +52,9 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final ConsentRepository consentRepository;
     private final MotherRepository motherRepository;
     private final AuditService auditService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public ServiceRequestServiceImpl(ServiceRequestRepository serviceRequestRepository,
                                      GovSyncLogRepository govSyncLogRepository,
@@ -84,19 +90,20 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
             }
         }
 
-        // GOV_DATA_SHARE consent validation — requester must be a mother with active consent
+        // GOV_DATA_SHARE consent validation — only mothers may submit; consent must be active
         User requester = userRepository.findByPhoneNumber(auth.getName())
             .orElseThrow(() -> new CustomException("Requester not found", HttpStatus.UNAUTHORIZED));
 
-        motherRepository.findByUserId(requester.getId()).ifPresent(mother -> {
-            boolean hasConsent = consentRepository
-                .existsActiveConsent(mother.getId(), "GOV_DATA_SHARE");
-            if (!hasConsent) {
-                throw new CustomException(
-                    "Active GOV_DATA_SHARE consent is required to submit a service request",
-                    HttpStatus.FORBIDDEN);
-            }
-        });
+        var mother = motherRepository.findByUserId(requester.getId())
+            .orElseThrow(() -> new CustomException(
+                "Only registered mothers may submit a service request", HttpStatus.FORBIDDEN));
+
+        boolean hasConsent = consentRepository.existsActiveConsent(mother.getId(), "GOV_DATA_SHARE");
+        if (!hasConsent) {
+            throw new CustomException(
+                "Active GOV_DATA_SHARE consent is required to submit a service request",
+                HttpStatus.FORBIDDEN);
+        }
 
         Facility facility = facilityRepository.findById(request.facilityId())
             .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
@@ -149,7 +156,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     public Page<ServiceRequestResponse> getByStatus(String status, Pageable pageable) {
         ServiceRequestStatus srStatus;
         try {
-            srStatus = ServiceRequestStatus.valueOf(status.toUpperCase());
+            srStatus = ServiceRequestStatus.valueOf(status.toUpperCase(java.util.Locale.ROOT));
         } catch (IllegalArgumentException e) {
             throw new CustomException("Invalid status value: " + status, HttpStatus.BAD_REQUEST);
         }
@@ -205,19 +212,14 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     }
 
     /**
-     * Generates a collision-safe reference number in the format SR-YYYY-NNNNN.
-     * Uses the DB count of existing records for the current year as the base,
-     * then increments until a unique candidate is found.
-     * Safe across restarts and multiple instances.
+     * Generates a collision-free SR reference using a PostgreSQL sequence.
+     * Thread-safe across all app instances and restarts.
+     * Format: SR-YYYY-NNNNN (e.g. SR-2025-00042)
      */
     private String generateReferenceNo() {
-        int year = Year.now().getValue();
-        long base = serviceRequestRepository.countByReferenceNoStartingWith("SR-" + year + "-");
-        String candidate;
-        do {
-            base++;
-            candidate = String.format("SR-%d-%05d", year, base);
-        } while (serviceRequestRepository.existsByReferenceNo(candidate));
-        return candidate;
+        long seq = ((Number) entityManager
+            .createNativeQuery("SELECT nextval('sr_ref_seq')")
+            .getSingleResult()).longValue();
+        return String.format("SR-%d-%05d", Year.now().getValue(), seq);
     }
 }

@@ -5,8 +5,9 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 
 @Component("nidaApi")
 public class NidaApiHealthIndicator implements HealthIndicator {
@@ -21,7 +22,7 @@ public class NidaApiHealthIndicator implements HealthIndicator {
         }
         try {
             HttpURLConnection conn = (HttpURLConnection)
-                new URL(nidaBaseUrl + "/health").openConnection();
+                URI.create(nidaBaseUrl + "/health").toURL().openConnection();
             conn.setRequestMethod("GET");
             conn.setConnectTimeout(3000);
             conn.setReadTimeout(3000);
@@ -30,7 +31,7 @@ public class NidaApiHealthIndicator implements HealthIndicator {
             return code < 500
                 ? Health.up().withDetail("provider", "nida").build()
                 : Health.down().withDetail("httpStatus", code).build();
-        } catch (Exception e) {
+        } catch (IOException e) {
             return Health.down().withDetail("error", e.getMessage()).build();
         }
     }

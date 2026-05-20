@@ -20,8 +20,10 @@ import com.motherhood.journey.maternal.entity.Prescription;
 import com.motherhood.journey.maternal.repository.DiagnosisRepository;
 import com.motherhood.journey.maternal.repository.HealthVisitRepository;
 import com.motherhood.journey.maternal.repository.PrescriptionRepository;
+import com.motherhood.journey.maternal.enums.PatientType;
 import com.motherhood.journey.security.FacilityAuthDetails;
 import com.motherhood.journey.security.FacilityScope;
+import com.motherhood.journey.security.SecurityConstants;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -32,14 +34,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class HealthVisitServiceImpl implements HealthVisitService {
 
-    private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
+    private static final java.util.Set<String> CROSS_FACILITY_ROLES = SecurityConstants.CROSS_FACILITY_ROLES;
+
 
     private final HealthVisitRepository healthVisitRepository;
     private final DiagnosisRepository diagnosisRepository;
@@ -67,80 +71,18 @@ public class HealthVisitServiceImpl implements HealthVisitService {
 
     @Override
     public HealthVisitResponse createVisit(CreateHealthVisitRequest request) {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isCrossFacility = auth.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .anyMatch(CROSS_FACILITY_ROLES::contains);
-        if (!isCrossFacility) {
-            UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd
-                ? fd.facilityId() : null;
-            if (jwtFacilityId == null || !jwtFacilityId.equals(request.facilityId())) {
-                throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
-            }
-        }
+        assertFacilityAccess(request.facilityId());
 
-        Facility facility = facilityRepository.findById(request.facilityId())
-            .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
+        Facility facility       = resolveFacility(request.facilityId());
+        User healthWorker        = resolveHealthWorker(request.healthWorkerId());
+        GeoLocation geoLocation  = resolveGeoLocation(request.geoLocationId());
 
-        User healthWorker = userRepository.findById(request.healthWorkerId())
-            .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
-
-        GeoLocation geoLocation = null;
-        if (request.geoLocationId() != null) {
-            geoLocation = geoRepository.findById(request.geoLocationId())
-                .orElseThrow(() -> new CustomException("GeoLocation not found", HttpStatus.NOT_FOUND));
-        }
-
-        HealthVisit visit = HealthVisit.builder()
-            .patientRefId(request.patientRefId())
-            .patientType(request.patientType().name())
-            .facility(facility)
-            .healthWorker(healthWorker)
-            .geoLocation(geoLocation)
-            .visitDatetime(request.visitDatetime())
-            .visitType(request.visitType().name())
-            .chiefComplaint(request.chiefComplaint())
-            .weightKg(request.weightKg())
-            .heightCm(request.heightCm())
-            .systolicBp(request.systolicBp())
-            .diastolicBp(request.diastolicBp())
-            .muacCm(request.muacCm())
-            .notes(request.notes())
-            .build();
-
-        HealthVisit saved = healthVisitRepository.save(visit);
-
-        List<Diagnosis> savedDiagnoses = List.of();
-        List<DiagnosisRequest> diagReqs = request.diagnoses() != null ? request.diagnoses() : List.of();
-        if (!diagReqs.isEmpty()) {
-            savedDiagnoses = diagnosisRepository.saveAll(diagReqs.stream()
-                .map(d -> Diagnosis.builder()
-                    .visit(saved)
-                    .icd10Code(d.icd10Code())
-                    .description(d.description())
-                    .severity(d.severity())
-                    .isPrimary(d.isPrimary())
-                    .build())
-                .toList());
-        }
-
-        List<Prescription> savedPrescriptions = List.of();
-        List<PrescriptionRequest> rxReqs = request.prescriptions() != null ? request.prescriptions() : List.of();
-        if (!rxReqs.isEmpty()) {
-            savedPrescriptions = prescriptionRepository.saveAll(rxReqs.stream()
-                .map(p -> Prescription.builder()
-                    .visit(saved)
-                    .medicationName(p.medicationName())
-                    .dosage(p.dosage())
-                    .frequency(p.frequency())
-                    .durationDays(p.durationDays())
-                    .instructions(p.instructions())
-                    .build())
-                .toList());
-        }
+        HealthVisit saved = persistVisit(request, facility, healthWorker, geoLocation);
+        List<Diagnosis> diagnoses         = persistDiagnoses(saved, request.diagnoses());
+        List<Prescription> prescriptions  = persistPrescriptions(saved, request.prescriptions());
 
         auditService.log(AuditAction.CREATE, "HEALTH_VISIT", saved.getId());
-        return HealthVisitResponse.from(saved, savedDiagnoses, savedPrescriptions);
+        return HealthVisitResponse.from(saved, diagnoses, prescriptions);
     }
 
     @Override
@@ -159,26 +101,18 @@ public class HealthVisitServiceImpl implements HealthVisitService {
     @FacilityScope
     @Transactional(readOnly = true)
     public Page<HealthVisitResponse> getVisitsByFacility(UUID facilityId, Pageable pageable) {
-        return healthVisitRepository.findByFacility_Id(facilityId, pageable)
-            .map(v -> HealthVisitResponse.from(
-                v,
-                diagnosisRepository.findByVisit_Id(v.getId()),
-                prescriptionRepository.findByVisit_Id(v.getId())
-            ));
+        Page<HealthVisit> visits = healthVisitRepository.findByFacility_Id(facilityId, pageable);
+        return buildPageResponse(visits);
     }
 
     @Override
     @FacilityScope
     @Transactional(readOnly = true)
     public Page<HealthVisitResponse> getVisitsByPatient(
-            UUID patientRefId, String patientType, UUID facilityId, Pageable pageable) {
-        return healthVisitRepository
-            .findByPatientRefIdAndPatientTypeAndFacility_Id(patientRefId, patientType, facilityId, pageable)
-            .map(v -> HealthVisitResponse.from(
-                v,
-                diagnosisRepository.findByVisit_Id(v.getId()),
-                prescriptionRepository.findByVisit_Id(v.getId())
-            ));
+            UUID patientRefId, PatientType patientType, UUID facilityId, Pageable pageable) {
+        Page<HealthVisit> visits = healthVisitRepository
+            .findByPatientRefIdAndPatientTypeAndFacility_Id(patientRefId, patientType.name(), facilityId, pageable);
+        return buildPageResponse(visits);
     }
 
     @Override
@@ -202,8 +136,106 @@ public class HealthVisitServiceImpl implements HealthVisitService {
         );
     }
 
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private void assertFacilityAccess(UUID requestFacilityId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isCrossFacility = auth.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(CROSS_FACILITY_ROLES::contains);
+        if (isCrossFacility) return;
+        UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd
+            ? fd.facilityId() : null;
+        if (jwtFacilityId == null || !jwtFacilityId.equals(requestFacilityId)) {
+            throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
+        }
+    }
+
+    private Facility resolveFacility(UUID facilityId) {
+        return facilityRepository.findById(facilityId)
+            .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
+    }
+
+    private User resolveHealthWorker(UUID healthWorkerId) {
+        return userRepository.findById(healthWorkerId)
+            .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
+    }
+
+    private GeoLocation resolveGeoLocation(UUID geoLocationId) {
+        if (geoLocationId == null) return null;
+        return geoRepository.findById(geoLocationId)
+            .orElseThrow(() -> new CustomException("GeoLocation not found", HttpStatus.NOT_FOUND));
+    }
+
+    private HealthVisit persistVisit(CreateHealthVisitRequest request,
+                                     Facility facility, User healthWorker, GeoLocation geoLocation) {
+        return healthVisitRepository.save(HealthVisit.builder()
+            .patientRefId(request.patientRefId())
+            .patientType(request.patientType().name())
+            .facility(facility)
+            .healthWorker(healthWorker)
+            .geoLocation(geoLocation)
+            .visitDatetime(request.visitDatetime())
+            .visitType(request.visitType())
+            .chiefComplaint(request.chiefComplaint())
+            .weightKg(request.weightKg())
+            .heightCm(request.heightCm())
+            .systolicBp(request.systolicBp())
+            .diastolicBp(request.diastolicBp())
+            .muacCm(request.muacCm())
+            .notes(request.notes())
+            .build());
+    }
+
+    private List<Diagnosis> persistDiagnoses(HealthVisit visit, List<DiagnosisRequest> diagReqs) {
+        if (diagReqs == null || diagReqs.isEmpty()) return List.of();
+        return diagnosisRepository.saveAll(diagReqs.stream()
+            .map(d -> Diagnosis.builder()
+                .visit(visit)
+                .icd10Code(d.icd10Code())
+                .description(d.description())
+                .severity(d.severity())
+                .isPrimary(d.isPrimary())
+                .build())
+            .toList());
+    }
+
+    private List<Prescription> persistPrescriptions(HealthVisit visit, List<PrescriptionRequest> rxReqs) {
+        if (rxReqs == null || rxReqs.isEmpty()) return List.of();
+        return prescriptionRepository.saveAll(rxReqs.stream()
+            .map(p -> Prescription.builder()
+                .visit(visit)
+                .medicationName(p.medicationName())
+                .dosage(p.dosage())
+                .frequency(p.frequency())
+                .durationDays(p.durationDays())
+                .instructions(p.instructions())
+                .build())
+            .toList());
+    }
+
     private HealthVisit findByIdAndFacility(UUID id, UUID facilityId) {
         return healthVisitRepository.findByIdAndFacility_Id(id, facilityId)
             .orElseThrow(() -> new CustomException("Health visit not found", HttpStatus.NOT_FOUND));
+    }
+
+    /**
+     * Batch-fetches diagnoses and prescriptions for an entire page of visits in 2 queries
+     * instead of 2N queries. Eliminates the N+1 problem on paginated endpoints.
+     */
+    private Page<HealthVisitResponse> buildPageResponse(Page<HealthVisit> visits) {
+        List<UUID> visitIds = visits.map(HealthVisit::getId).toList();
+
+        Map<UUID, List<Diagnosis>> diagMap = diagnosisRepository.findByVisit_IdIn(visitIds)
+            .stream().collect(Collectors.groupingBy(d -> d.getVisit().getId()));
+
+        Map<UUID, List<Prescription>> rxMap = prescriptionRepository.findByVisit_IdIn(visitIds)
+            .stream().collect(Collectors.groupingBy(p -> p.getVisit().getId()));
+
+        return visits.map(v -> HealthVisitResponse.from(
+            v,
+            diagMap.getOrDefault(v.getId(), List.of()),
+            rxMap.getOrDefault(v.getId(), List.of())
+        ));
     }
 }

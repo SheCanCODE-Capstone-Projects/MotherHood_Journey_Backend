@@ -15,6 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.Arrays;
 
@@ -25,16 +26,16 @@ public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
     private final LoginRateLimitFilter loginRateLimitFilter;
-    private final CorsConfig corsConfig;
+    private final CorsConfigurationSource corsConfigurationSource;
     private final Environment environment;
 
     public SecurityConfig(JwtFilter jwtFilter,
                           LoginRateLimitFilter loginRateLimitFilter,
-                          CorsConfig corsConfig,
+                          CorsConfigurationSource corsConfigurationSource,
                           Environment environment) {
         this.jwtFilter = jwtFilter;
         this.loginRateLimitFilter = loginRateLimitFilter;
-        this.corsConfig = corsConfig;
+        this.corsConfigurationSource = corsConfigurationSource;
         this.environment = environment;
     }
 
@@ -43,7 +44,7 @@ public class SecurityConfig {
         boolean isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod");
 
         http
-            .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> {

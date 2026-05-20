@@ -70,6 +70,10 @@ irembo:
   base-url: ${IREMBO_BASE_URL:}
   api-key: ${IREMBO_API_KEY:}
 
+# NIDA API
+nida:
+  base-url: ${NIDA_BASE_URL:}
+
 # Actuator
 management:
   endpoints:
@@ -78,7 +82,7 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
 
 # Logging
 logging:

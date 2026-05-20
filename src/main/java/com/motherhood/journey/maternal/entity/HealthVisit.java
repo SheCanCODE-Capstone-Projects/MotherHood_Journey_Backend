@@ -2,6 +2,7 @@ package com.motherhood.journey.maternal.entity;
 
 
 import com.motherhood.journey.geo.entity.Facility;
+import com.motherhood.journey.maternal.enums.VisitType;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
 import jakarta.persistence.*;
@@ -31,6 +32,9 @@ public class HealthVisit {
     @Column(columnDefinition = "UUID")
     private UUID id;
 
+    @Version
+    private Long version;
+
     // Polymorphic reference — can point to Mother or Child
     @Column(name = "patient_ref_id", nullable = false, columnDefinition = "UUID")
     private UUID patientRefId;
@@ -53,8 +57,9 @@ public class HealthVisit {
     @Column(name = "visit_datetime", nullable = false)
     private LocalDateTime visitDatetime;
 
-    @Column(name = "visit_type", nullable = false, length = 16)
-    private String visitType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visit_type", nullable = false, length = 24)
+    private VisitType visitType;
 
     @Column(name = "chief_complaint", columnDefinition = "TEXT")
     private String chiefComplaint;
