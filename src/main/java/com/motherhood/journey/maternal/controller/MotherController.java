@@ -2,44 +2,76 @@ package com.motherhood.journey.maternal.controller;
 
 import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.maternal.dto.request.CreateMotherRequest;
-import com.motherhood.journey.maternal.dto.response.MotherDTO;
+import com.motherhood.journey.maternal.dto.request.UpdateMotherRequest;
 import com.motherhood.journey.maternal.dto.response.MotherResponse;
 import com.motherhood.journey.maternal.service.MotherService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/mothers")
-@RequiredArgsConstructor
+@Validated
 public class MotherController {
 
     private final MotherService motherService;
 
-    /**
-     * POST /api/v1/mothers
-     * Registers a new mother, returns immediately with generated health_id.
-     * NIDA verification runs asynchronously in the background.
-     */
+    public MotherController(MotherService motherService) {
+        this.motherService = motherService;
+    }
+
     @PostMapping
-    public ResponseEntity<ApiResponse<MotherResponse>> register(
-            @Valid @RequestBody CreateMotherRequest request) {
-        MotherResponse response = motherService.registerMother(request);
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    public ResponseEntity<ApiResponse<MotherResponse>> createMother(
+        @Valid @RequestBody CreateMotherRequest request
+    ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response, "Mother registered successfully. NIDA verification is in progress."));
+            .body(ApiResponse.success(motherService.createMother(request), "Mother registered successfully"));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<MotherDTO>> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(motherService.getMotherById(id), "Mother retrieved"));
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    public ResponseEntity<ApiResponse<MotherResponse>> getMotherById(
+        @PathVariable UUID id,
+        @RequestParam UUID facilityId
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.success(motherService.getMotherById(id, facilityId), "Mother retrieved"));
     }
 
-    @GetMapping("/health-id/{healthId}")
-    public ResponseEntity<ApiResponse<MotherDTO>> getByHealthId(@PathVariable String healthId) {
-        return ResponseEntity.ok(ApiResponse.success(motherService.getMotherByHealthId(healthId), "Mother retrieved"));
+    @GetMapping("/by-facility/{facilityId}")
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    public ResponseEntity<ApiResponse<List<MotherResponse>>> getMothersByFacility(
+        @PathVariable UUID facilityId
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.success(motherService.getMothersByFacility(facilityId), "Mothers retrieved"));
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    public ResponseEntity<ApiResponse<MotherResponse>> updateMother(
+        @PathVariable UUID id,
+        @RequestParam UUID facilityId,
+        @Valid @RequestBody UpdateMotherRequest request
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.success(motherService.updateMother(id, facilityId, request), "Mother updated"));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN')")
+    public ResponseEntity<Void> deactivateMother(
+        @PathVariable UUID id,
+        @RequestParam UUID facilityId
+    ) {
+        motherService.deactivateMother(id, facilityId);
+        return ResponseEntity.noContent().build();
     }
 }

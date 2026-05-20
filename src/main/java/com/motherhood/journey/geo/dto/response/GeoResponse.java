@@ -1,22 +1,36 @@
 package com.motherhood.journey.geo.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.motherhood.journey.geo.entity.GeoLocation;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class GeoResponse {
-
-    private UUID id;
-    private String province;
-    private String district;
-    private String sector;
-    private String cell;
-    private String village;
-    private Double latitude;
-    private Double longitude;
+public record GeoResponse(
+    UUID id,
+    String province,
+    String district,
+    String sector,
+    String cell,
+    String village,
+    String postalCode,
+    Double latitude,
+    Double longitude,
+    Boolean active,
+    LocalDateTime createdAt
+) {
+    public static GeoResponse from(GeoLocation g) {
+        return new GeoResponse(
+            g.getId(),
+            g.getProvince(),
+            g.getDistrict(),
+            g.getSector(),
+            g.getCell(),
+            g.getVillage(),
+            g.getPostalCode(),
+            g.getLatitude(),
+            g.getLongitude(),
+            g.getActive(),
+            g.getCreatedAt()
+        );
+    }
 }

@@ -3,6 +3,7 @@ package com.motherhood.journey.government.entity;
 
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
+import com.motherhood.journey.government.enums.ServiceRequestStatus;
 import com.motherhood.journey.identity.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -50,9 +51,13 @@ public class ServiceRequest {
     @Column(name = "service_type", nullable = false, length = 32)
     private String serviceType;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
     @Builder.Default
-    private String status = "PENDING";
+    private ServiceRequestStatus status = ServiceRequestStatus.PENDING;
+
+    @Version
+    private Long version;
 
     @Column(name = "reference_no", nullable = false, unique = true, length = 32)
     private String referenceNo;
