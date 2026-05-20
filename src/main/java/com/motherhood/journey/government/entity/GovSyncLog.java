@@ -1,30 +1,21 @@
 package com.motherhood.journey.government.entity;
 
-import com.motherhood.journey.government.enums.SyncStatus;
-import com.motherhood.journey.government.enums.TargetSystem;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import com.motherhood.journey.geo.entity.Facility;
+import com.motherhood.journey.government.entity.ServiceRequest;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.UuidGenerator;
 
-import java.time.OffsetDateTime;
-import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "gov_sync_log")
+@Table(name = "gov_sync_log", indexes = {
+        @Index(name = "idx_gsync_idempotency", columnList = "idempotency_key", unique = true),
+        @Index(name = "idx_gsync_status",      columnList = "status"),
+        @Index(name = "idx_gsync_target",      columnList = "target_system"),
+        @Index(name = "idx_gsync_retry",       columnList = "next_retry_at")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,59 +23,49 @@ import java.util.UUID;
 @Builder
 public class GovSyncLog {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.UUID)
-	private UUID id;
+    @Id
+    @UuidGenerator
+    @Column(columnDefinition = "UUID")
+    private UUID id;
 
-	@Column(name = "idempotency_key", nullable = false, unique = true)
-	private String idempotencyKey;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "facility_id")
+    private Facility facility;
 
-	@Enumerated(EnumType.STRING)
-	@Column(name = "target_system", nullable = false)
-	private TargetSystem targetSystem;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_request_id")
+    private ServiceRequest serviceRequest;
 
-	@Column(name = "sync_type", nullable = false)
-	private String syncType;
+    @Column(name = "target_system", nullable = false, length = 16)
+    private String targetSystem;
 
-	@Column(name = "reference_no")
-	private String referenceNo;
+    @Column(name = "sync_type", nullable = false, length = 32)
+    private String syncType;
 
-	@JdbcTypeCode(SqlTypes.JSON)
-	@Column(name = "payload", columnDefinition = "jsonb")
-	private Map<String, Object> payload;
+    @Column(nullable = false, length = 16)
+    @Builder.Default
+    private String status = "PENDING";
 
-	@Column(name = "payload_hash")
-	private String payloadHash;
+    @Column(name = "idempotency_key", nullable = false, unique = true, length = 64)
+    private String idempotencyKey;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	@Builder.Default
-	private SyncStatus status = SyncStatus.PENDING;
+    @Column(name = "payload_hash", length = 64)
+    private String payloadHash;
 
-	@Column(name = "retry_count", nullable = false)
-	@Builder.Default
-	private int retryCount = 0;
+    @Column(name = "retry_count", nullable = false)
+    @Builder.Default
+    private Integer retryCount = 0;
 
-	@Column(name = "next_retry_at")
-	private OffsetDateTime nextRetryAt;
+    @Column(name = "error_message", columnDefinition = "TEXT")
+    private String errorMessage;
 
-	@Column(name = "last_error", columnDefinition = "TEXT")
-	private String lastError;
+    @Column(name = "synced_at")
+    private LocalDateTime syncedAt;
 
-	@Column(name = "dead_letter", nullable = false)
-	@Builder.Default
-	private boolean deadLetter = false;
+    @Column(name = "next_retry_at")
+    private LocalDateTime nextRetryAt;
 
-	@Column(name = "created_at", nullable = false, updatable = false)
-	@Builder.Default
-	private OffsetDateTime createdAt = OffsetDateTime.now();
-
-	@Column(name = "updated_at", nullable = false)
-	@Builder.Default
-	private OffsetDateTime updatedAt = OffsetDateTime.now();
-
-	@PreUpdate
-	public void onUpdate() {
-		this.updatedAt = OffsetDateTime.now();
-	}
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

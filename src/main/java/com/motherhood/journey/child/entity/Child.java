@@ -44,6 +44,9 @@ public class Child {
     @JoinColumn(name = "geo_location_id", nullable = false)
     private GeoLocation geoLocation;
 
+    @Column(name = "health_id", unique = true, length = 32)
+    private String healthId;
+
     @Column(name = "birth_certificate_no", unique = true, length = 64)
     private String birthCertificateNo;
 

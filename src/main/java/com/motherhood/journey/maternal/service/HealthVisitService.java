@@ -1,3 +1,18 @@
 package com.motherhood.journey.maternal.service;
 
-public class HealthVisitService {}
+import com.motherhood.journey.maternal.dto.request.CreateHealthVisitRequest;
+import com.motherhood.journey.maternal.dto.request.UpdateHealthVisitRequest;
+import com.motherhood.journey.maternal.dto.response.HealthVisitResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+import java.util.UUID;
+
+public interface HealthVisitService {
+    HealthVisitResponse createVisit(CreateHealthVisitRequest request);
+    HealthVisitResponse getVisitById(UUID id, UUID facilityId);
+    Page<HealthVisitResponse> getVisitsByFacility(UUID facilityId, Pageable pageable);
+    Page<HealthVisitResponse> getVisitsByPatient(UUID patientRefId, String patientType, UUID facilityId, Pageable pageable);
+    HealthVisitResponse updateVisit(UUID id, UUID facilityId, UpdateHealthVisitRequest request);
+}
