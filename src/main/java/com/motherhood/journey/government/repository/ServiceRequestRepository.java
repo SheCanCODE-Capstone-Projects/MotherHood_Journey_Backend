@@ -17,7 +17,6 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     Page<ServiceRequest> findByRequester_Id(UUID requesterId, Pageable pageable);
     Page<ServiceRequest> findByStatus(ServiceRequestStatus status, Pageable pageable);
     boolean existsByReferenceNo(String referenceNo);
-    long countByReferenceNoStartingWith(String prefix);
 
     /**
      * Finds PENDING requests submitted before the given cutoff — used by escalation scheduler.

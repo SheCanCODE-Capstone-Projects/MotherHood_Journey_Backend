@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface PrescriptionRepository extends JpaRepository<Prescription, UUID> {
     List<Prescription> findByVisit_Id(UUID visitId);
+    List<Prescription> findByVisit_IdIn(List<UUID> visitIds);
 }

@@ -10,5 +10,7 @@ public record UpdateUserRequest(
     String lastName,
 
     @Size(max = 8)
-    String preferredLanguage
+    String preferredLanguage,
+
+    Boolean active
 ) {}

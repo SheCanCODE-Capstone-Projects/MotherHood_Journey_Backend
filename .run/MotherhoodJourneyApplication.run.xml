@@ -6,13 +6,13 @@
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.motherhood.journey.MotherhoodJourneyApplication" />
     <option name="MAIN_CLASS_NAME" value="com.motherhood.journey.MotherhoodJourneyApplication" />
     <envs>
-      <env name="APP_PORT" value="9380" />
+      <env name="APP_PORT" value="4567" />
       <env name="DB_HOST" value="localhost" />
       <env name="DB_PORT" value="5432" />
-      <env name="DB_NAME" value="Motherhood" />
+      <env name="DB_NAME" value="motherhood_db" />
       <env name="DB_USERNAME" value="postgres" />
       <env name="DB_PASSWORD" value="123" />
-      <env name="JWT_SECRET" value="motherhood-journey-secret-key-change-in-production" />
+      <env name="JWT_SECRET" value="motherhood-journey-local-dev-secret-key-min-64-characters-long!!" />
       <env name="JWT_EXPIRATION_MS" value="86400000" />
       <env name="AT_API_KEY" value="test" />
       <env name="AT_USERNAME" value="sandbox" />

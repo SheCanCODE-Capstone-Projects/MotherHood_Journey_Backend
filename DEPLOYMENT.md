@@ -16,6 +16,7 @@
 | `AT_USERNAME` | Africa's Talking username | `motherhood` |
 | `IREMBO_BASE_URL` | Irembo API base URL | `https://api.irembo.gov.rw` |
 | `IREMBO_API_KEY` | Irembo API key | *(secret)* |
+| `NIDA_BASE_URL` | NIDA identity verification API base URL | `https://api.nida.gov.rw` |
 | `ESCALATION_PENDING_HOURS` | Hours before a PENDING SR is escalated | `48` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated allowed frontend origins | `https://app.motherhood.rw` |
 | `SPRING_PROFILES_ACTIVE` | Active Spring profile | `prod` |
@@ -42,6 +43,10 @@ src/main/resources/db/migration/
   V1__Initial_Schema.sql
   V2__Schema_Fixes.sql
   V3__Audit_Log_Partitioning.sql
+  V4__Constraints_And_Partitions.sql
+  V5__Appointments_And_Notifications.sql
+  V6__SR_Sequence.sql
+  V7__Performance_Indexes.sql
 ```
 
 **Never edit existing migration files.** Always add a new `V{n}__Description.sql`.

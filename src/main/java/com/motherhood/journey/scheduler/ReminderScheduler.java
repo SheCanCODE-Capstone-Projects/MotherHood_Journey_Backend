@@ -43,14 +43,14 @@ public class ReminderScheduler {
                 notification.setStatus("SENT");
                 notification.setSentAt(LocalDateTime.now());
                 log.debug("Notification {} marked SENT to {}", notification.getId(), notification.getPhoneNumber());
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 int retries = notification.getRetryCount() + 1;
                 notification.setRetryCount(retries);
                 if (retries >= MAX_RETRIES) {
                     notification.setStatus("FAILED");
-                    log.warn("Notification {} FAILED after {} retries", notification.getId(), retries, e);
+                    log.error("Notification {} FAILED after {} retries: {}", notification.getId(), retries, e.getMessage(), e);
                 } else {
-                    log.warn("Notification {} retry {}/{}", notification.getId(), retries, MAX_RETRIES, e);
+                    log.warn("Notification {} retry {}/{}: {}", notification.getId(), retries, MAX_RETRIES, e.getMessage());
                 }
             }
         }

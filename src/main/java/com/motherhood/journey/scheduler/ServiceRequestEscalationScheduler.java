@@ -5,6 +5,10 @@ import com.motherhood.journey.common.service.AuditService;
 import com.motherhood.journey.government.entity.ServiceRequest;
 import com.motherhood.journey.government.enums.ServiceRequestStatus;
 import com.motherhood.journey.government.repository.ServiceRequestRepository;
+import com.motherhood.journey.notification.entity.SmsNotification;
+import com.motherhood.journey.notification.repository.NotificationRepository;
+import com.motherhood.journey.identity.entity.User;
+import com.motherhood.journey.identity.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,11 +39,17 @@ public class ServiceRequestEscalationScheduler {
 
     private final ServiceRequestRepository serviceRequestRepository;
     private final AuditService auditService;
+    private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     public ServiceRequestEscalationScheduler(ServiceRequestRepository serviceRequestRepository,
-                                              AuditService auditService) {
+                                              AuditService auditService,
+                                              NotificationRepository notificationRepository,
+                                              UserRepository userRepository) {
         this.serviceRequestRepository = serviceRequestRepository;
         this.auditService = auditService;
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
     }
 
     @Scheduled(fixedDelay = 3_600_000) // every hour
@@ -56,14 +66,38 @@ public class ServiceRequestEscalationScheduler {
         for (ServiceRequest sr : stale) {
             sr.setStatus(ServiceRequestStatus.UNDER_REVIEW);
 
-            // TODO: notify assigned DISTRICT_OFFICER via SMS/notification service
             log.warn("EscalationScheduler: SR {} [{}] escalated to UNDER_REVIEW — " +
-                "submitted at {} — route to DISTRICT_OFFICER",
+                "submitted at {} — routing to DISTRICT_OFFICER",
                 sr.getReferenceNo(), sr.getId(), sr.getSubmittedAt());
 
+            notifyDistrictOfficer(sr);
             auditService.log(AuditAction.UPDATE, "SERVICE_REQUEST", sr.getId());
         }
 
         serviceRequestRepository.saveAll(stale);
+    }
+
+    private void notifyDistrictOfficer(ServiceRequest sr) {
+        userRepository.findDistrictOfficerByDistrict(
+            sr.getFacility() != null ? sr.getFacility().getDistrict() : null
+        ).ifPresentOrElse(
+            officer -> {
+                String message = String.format(
+                    "[ESCALATION] Service request %s has been pending for over %dh. " +
+                    "Please review immediately.", sr.getReferenceNo(), escalationHours);
+                SmsNotification sms = SmsNotification.builder()
+                    .recipientUser(officer)
+                    .phoneNumber(officer.getPhoneNumber())
+                    .messageBody(message)
+                    .notificationType("ESCALATION_ALERT")
+                    .scheduledAt(LocalDateTime.now())
+                    .build();
+                notificationRepository.save(sms);
+                log.info("EscalationScheduler: SMS queued for DISTRICT_OFFICER {} re SR {}",
+                    officer.getId(), sr.getReferenceNo());
+            },
+            () -> log.warn("EscalationScheduler: no DISTRICT_OFFICER found for SR {} — " +
+                "notification skipped", sr.getReferenceNo())
+        );
     }
 }

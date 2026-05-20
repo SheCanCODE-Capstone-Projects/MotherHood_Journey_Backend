@@ -65,7 +65,7 @@ public record HealthVisitResponse(
             v.getFacility() != null ? v.getFacility().getId() : null,
             v.getHealthWorker() != null ? v.getHealthWorker().getId() : null,
             v.getVisitDatetime(),
-            v.getVisitType(),
+            v.getVisitType() != null ? v.getVisitType().name() : null,
             v.getChiefComplaint(),
             v.getWeightKg(),
             v.getHeightCm(),

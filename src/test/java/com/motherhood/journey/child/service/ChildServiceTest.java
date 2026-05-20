@@ -33,6 +33,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -43,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -90,9 +96,9 @@ class ChildServiceTest {
         org.springframework.security.core.GrantedAuthority authority =
             () -> "ROLE_MOH_ADMIN";
 
-        when(auth.getAuthorities()).thenAnswer(inv ->
+        lenient().when(auth.getAuthorities()).thenAnswer(inv ->
             java.util.List.of(authority));
-        when(ctx.getAuthentication()).thenReturn(auth);
+        lenient().when(ctx.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(ctx);
 
         // ── Shared IDs ──
@@ -316,11 +322,10 @@ class ChildServiceTest {
             CreateChildRequest request = buildRequest(motherId, facilityId, geoLocationId,
                 LocalDate.of(2024, 3, 15));
 
-            stubRepositoriesForSuccess(request);
+            stubRepositoriesExceptSave(request);
             when(vaccinationScheduleRepository.findByIsMandatoryTrue())
                 .thenReturn(Collections.emptyList());
 
-            // Capture the Child passed to save() to inspect its healthId
             ArgumentCaptor<Child> childCaptor = ArgumentCaptor.forClass(Child.class);
             when(childRepository.save(childCaptor.capture())).thenReturn(savedChild);
 
@@ -340,7 +345,7 @@ class ChildServiceTest {
             LocalDate dob = LocalDate.of(2024, 3, 15);
             CreateChildRequest request = buildRequest(motherId, facilityId, geoLocationId, dob);
 
-            stubRepositoriesForSuccess(request);
+            stubRepositoriesExceptSave(request);
             when(vaccinationScheduleRepository.findByIsMandatoryTrue())
                 .thenReturn(Collections.emptyList());
 
@@ -362,7 +367,7 @@ class ChildServiceTest {
             LocalDate dob = LocalDate.of(2023, 11, 5);
             CreateChildRequest request = buildRequest(motherId, facilityId, geoLocationId, dob);
 
-            stubRepositoriesForSuccess(request);
+            stubRepositoriesExceptSave(request);
             when(vaccinationScheduleRepository.findByIsMandatoryTrue())
                 .thenReturn(Collections.emptyList());
 
@@ -421,11 +426,10 @@ class ChildServiceTest {
         @Test
         @DisplayName("should generate same health_id prefix for same mother and same dob")
         void shouldGenerateSameHealthIdForSameMotherAndDob() {
-            // Arrange — two calls with identical motherId + dob produce the same deterministic ID
             LocalDate dob     = LocalDate.of(2024, 8, 20);
             CreateChildRequest request = buildRequest(motherId, facilityId, geoLocationId, dob);
 
-            stubRepositoriesForSuccess(request);
+            stubRepositoriesExceptSave(request);
             when(vaccinationScheduleRepository.findByIsMandatoryTrue())
                 .thenReturn(Collections.emptyList());
 
@@ -433,13 +437,10 @@ class ChildServiceTest {
             when(childRepository.save(captor1.capture())).thenReturn(savedChild);
             childService.registerChild(request);
 
-            ArgumentCaptor<Child> captor2 = ArgumentCaptor.forClass(Child.class);
-            when(childRepository.save(captor2.capture())).thenReturn(savedChild);
             childService.registerChild(request);
 
-            // Assert — deterministic: same inputs → same health ID
-            assertThat(captor1.getValue().getHealthId())
-                .isEqualTo(captor2.getValue().getHealthId());
+            assertThat(captor1.getAllValues().get(0).getHealthId())
+                .isEqualTo(captor1.getAllValues().get(1).getHealthId());
         }
     }
 
@@ -631,38 +632,43 @@ class ChildServiceTest {
         void shouldReturnChildrenForMotherInFacility() {
             Child child2 = buildSavedChild(UUID.randomUUID(), mother, facility,
                 geoLocation, LocalDate.of(2022, 7, 10));
+            Pageable pageable = PageRequest.of(0, 20);
 
-            when(childRepository.findByMother_IdAndFacility_Id(motherId, facilityId))
-                .thenReturn(List.of(savedChild, child2));
+            when(childRepository.findByMother_IdAndFacility_Id(motherId, facilityId, pageable))
+                .thenReturn(new PageImpl<>(List.of(savedChild, child2)));
 
-            List<ChildResponse> responses = childService.getChildrenByMother(motherId, facilityId);
+            Page<ChildResponse> responses = childService.getChildrenByMother(motherId, facilityId, pageable);
 
-            assertThat(responses).hasSize(2);
-            assertThat(responses).allMatch(r -> r.motherId().equals(motherId));
-            assertThat(responses).allMatch(r -> r.facilityId().equals(facilityId));
+            assertThat(responses.getContent()).hasSize(2);
+            assertThat(responses.getContent()).allMatch(r -> r.motherId().equals(motherId));
+            assertThat(responses.getContent()).allMatch(r -> r.facilityId().equals(facilityId));
         }
 
         @Test
-        @DisplayName("should return empty list when mother has no children in facility")
+        @DisplayName("should return empty page when mother has no children in facility")
         void shouldReturnEmptyListWhenNoChildrenFound() {
-            when(childRepository.findByMother_IdAndFacility_Id(motherId, facilityId))
-                .thenReturn(Collections.emptyList());
+            Pageable pageable = PageRequest.of(0, 20);
 
-            List<ChildResponse> responses = childService.getChildrenByMother(motherId, facilityId);
+            when(childRepository.findByMother_IdAndFacility_Id(motherId, facilityId, pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
 
-            assertThat(responses).isEmpty();
+            Page<ChildResponse> responses = childService.getChildrenByMother(motherId, facilityId, pageable);
+
+            assertThat(responses.getContent()).isEmpty();
         }
 
         @Test
         @DisplayName("should return exactly one child when mother has one child in facility")
         void shouldReturnSingleChildWhenOneExists() {
-            when(childRepository.findByMother_IdAndFacility_Id(motherId, facilityId))
-                .thenReturn(List.of(savedChild));
+            Pageable pageable = PageRequest.of(0, 20);
 
-            List<ChildResponse> responses = childService.getChildrenByMother(motherId, facilityId);
+            when(childRepository.findByMother_IdAndFacility_Id(motherId, facilityId, pageable))
+                .thenReturn(new PageImpl<>(List.of(savedChild)));
 
-            assertThat(responses).hasSize(1);
-            assertThat(responses.get(0).id()).isEqualTo(childId);
+            Page<ChildResponse> responses = childService.getChildrenByMother(motherId, facilityId, pageable);
+
+            assertThat(responses.getContent()).hasSize(1);
+            assertThat(responses.getContent().get(0).id()).isEqualTo(childId);
         }
     }
 
@@ -680,25 +686,28 @@ class ChildServiceTest {
             Mother mother2 = buildMother(UUID.randomUUID());
             Child child2   = buildSavedChild(UUID.randomUUID(), mother2, facility,
                 geoLocation, LocalDate.of(2023, 2, 20));
+            Pageable pageable = PageRequest.of(0, 20);
 
-            when(childRepository.findByFacility_Id(facilityId))
-                .thenReturn(List.of(savedChild, child2));
+            when(childRepository.findByFacility_Id(facilityId, pageable))
+                .thenReturn(new PageImpl<>(List.of(savedChild, child2)));
 
-            List<ChildResponse> responses = childService.getChildrenByFacility(facilityId);
+            Page<ChildResponse> responses = childService.getChildrenByFacility(facilityId, pageable);
 
-            assertThat(responses).hasSize(2);
-            assertThat(responses).allMatch(r -> r.facilityId().equals(facilityId));
+            assertThat(responses.getContent()).hasSize(2);
+            assertThat(responses.getContent()).allMatch(r -> r.facilityId().equals(facilityId));
         }
 
         @Test
-        @DisplayName("should return empty list when facility has no registered children")
+        @DisplayName("should return empty page when facility has no registered children")
         void shouldReturnEmptyListWhenFacilityHasNoChildren() {
-            when(childRepository.findByFacility_Id(facilityId))
-                .thenReturn(Collections.emptyList());
+            Pageable pageable = PageRequest.of(0, 20);
 
-            List<ChildResponse> responses = childService.getChildrenByFacility(facilityId);
+            when(childRepository.findByFacility_Id(facilityId, pageable))
+                .thenReturn(new PageImpl<>(Collections.emptyList()));
 
-            assertThat(responses).isEmpty();
+            Page<ChildResponse> responses = childService.getChildrenByFacility(facilityId, pageable);
+
+            assertThat(responses.getContent()).isEmpty();
         }
     }
 
@@ -813,6 +822,19 @@ class ChildServiceTest {
             .thenReturn(savedChild);
     }
 
+    /**
+     * Stubs all repositories EXCEPT childRepository.save().
+     * Use this when the test needs its own ArgumentCaptor on save().
+     */
+    private void stubRepositoriesExceptSave(CreateChildRequest request) {
+        when(motherRepository.findById(request.motherId()))
+            .thenReturn(Optional.of(mother));
+        when(facilityRepository.findById(request.facilityId()))
+            .thenReturn(Optional.of(facility));
+        when(geoRepository.findById(request.geoLocationId()))
+            .thenReturn(Optional.of(geoLocation));
+    }
+
     /** Overrides the security context with a FACILITY_ADMIN whose JWT facilityId is given. */
     private void stubFacilityAdminContext(UUID jwtFacilityId) {
         Authentication auth = mock(Authentication.class);
@@ -832,7 +854,7 @@ class ChildServiceTest {
             mId,
             fId,
             gId,
-            "CERT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(),
+            "CERT-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(java.util.Locale.ROOT),
             "Amara",
             Gender.FEMALE,
             dob,
@@ -844,7 +866,7 @@ class ChildServiceTest {
     private Mother buildMother(UUID id) {
         return Mother.builder()
             .id(id)
-            .healthId("MH-20000101-" + id.toString().substring(0, 8).toUpperCase())
+            .healthId("MH-20000101-" + id.toString().substring(0, 8).toUpperCase(java.util.Locale.ROOT))
             .dateOfBirth(LocalDate.of(1995, 6, 20))
             .build();
     }
@@ -876,7 +898,7 @@ class ChildServiceTest {
             .facility(f)
             .geoLocation(g)
             .healthId("CH-" + dob.toString().replace("-", "") + "-"
-                + m.getId().toString().substring(0, 8).toUpperCase())
+                + m.getId().toString().substring(0, 8).toUpperCase(java.util.Locale.ROOT))
             .firstName("Amara")
             .gender(Gender.FEMALE.name())
             .dateOfBirth(dob)

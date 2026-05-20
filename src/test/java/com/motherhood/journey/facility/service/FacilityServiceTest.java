@@ -8,6 +8,7 @@ import com.motherhood.journey.facility.repository.FacilityRepository;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.geo.repository.GeoRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,6 +17,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +36,13 @@ class FacilityServiceTest {
     @Mock FacilityRepository facilityRepository;
     @Mock GeoRepository geoRepository;
     @InjectMocks FacilityServiceImpl facilityService;
+
+    @BeforeEach
+    void setUpMohAdminContext() {
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+            "admin", null, List.of(new SimpleGrantedAuthority("ROLE_MOH_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
 
     @Test
     void getFacilities_noFilters_returnsActivePage() {
