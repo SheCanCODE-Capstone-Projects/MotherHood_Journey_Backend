@@ -1,0 +1,31 @@
+# ============================================================
+# CODEOWNERS — MotherHood Journey Backend
+# All listed paths require approval from the designated owner
+# before any PR can be merged into main.
+# ============================================================
+
+# Security configuration — requires security lead review
+src/main/java/com/motherhood/journey/config/SecurityConfig.java        @security-lead
+src/main/java/com/motherhood/journey/security/JwtUtil.java             @security-lead
+src/main/java/com/motherhood/journey/security/JwtFilter.java           @security-lead
+src/main/java/com/motherhood/journey/security/FacilityScope.java       @security-lead
+src/main/java/com/motherhood/journey/security/LoginRateLimitFilter.java @security-lead
+
+# Database migrations — requires DBA or tech lead review
+src/main/resources/db/migration/                                        @tech-lead @dba
+
+# Root POM — requires tech lead review (dependency changes affect all modules)
+pom.xml                                                                 @tech-lead
+
+# Application configuration — requires tech lead review
+src/main/resources/application.yaml                                     @tech-lead
+src/main/resources/application-prod.yml                                 @tech-lead
+
+# Deployment configuration
+Dockerfile                                                              @tech-lead
+DEPLOYMENT.md                                                           @tech-lead
+docker-compose.yml                                                      @tech-lead
+
+# CI/CD pipelines
+.github/workflows/                                                      @tech-lead
+.github/actions/                                                        @tech-lead
