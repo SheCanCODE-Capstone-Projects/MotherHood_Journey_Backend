@@ -1,8 +1,7 @@
 package com.motherhood.journey.maternal.service;
 
-
-
-import com.motherhood.journey.maternal.entity.Mother;
+import com.motherhood.journey.maternal.infrastructure.nida.NidaApiClient;
+import com.motherhood.journey.maternal.infrastructure.nida.NidaVerificationResult;
 import com.motherhood.journey.maternal.enums.NidaVerifiedStatus;
 import com.motherhood.journey.maternal.repository.MotherRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,26 +18,32 @@ import java.util.UUID;
 public class NidaVerificationService {
 
     private final MotherRepository motherRepository;
+    private final NidaApiClient nidaApiClient;
 
+    /**
+     * Called asynchronously after mother registration.
+     * Calls NidaApiClient, then updates nida_verified_status on the mother row.
+     */
     @Async
     @Transactional
-    public void verify(UUID motherId) {
-        motherRepository.findById(motherId).ifPresent(mother -> {
-            try {
-                // TODO: integrate with actual NIDA API
-                log.info("Triggering NIDA verification for mother {}", motherId);
+    public void verify(UUID motherId, String nationalId) {
+        log.info("NIDA verification started — motherId={} nid={}", motherId, nationalId);
+        try {
+            NidaVerificationResult result = nidaApiClient.verifyIdentity(nationalId);
+            NidaVerifiedStatus status = result.status();
 
-                // Placeholder — real impl calls NIDA REST API and updates status
-                updateStatus(mother, NidaVerifiedStatus.PENDING);
-            } catch (Exception e) {
-                log.error("NIDA verification failed for mother {}: {}", motherId, e.getMessage());
-                updateStatus(mother, NidaVerifiedStatus.FAILED);
-            }
-        });
-    }
+            motherRepository.findById(motherId).ifPresent(mother -> {
+                mother.setNidaVerifiedStatus(status.name());
+                motherRepository.save(mother);
+                log.info("NIDA verification complete — motherId={} status={}", motherId, status);
+            });
 
-    private void updateStatus(Mother mother, NidaVerifiedStatus status) {
-        mother.setNidaVerifiedStatus(NidaVerifiedStatus.MANUAL);
-        motherRepository.save(mother);
+        } catch (Exception e) {
+            log.error("NIDA verification error — motherId={} error={}", motherId, e.getMessage());
+            motherRepository.findById(motherId).ifPresent(mother -> {
+                mother.setNidaVerifiedStatus(NidaVerifiedStatus.FAILED.name());
+                motherRepository.save(mother);
+            });
+        }
     }
 }

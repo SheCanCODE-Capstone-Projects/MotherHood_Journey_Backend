@@ -4,10 +4,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record UpdateAppointmentRequest(
-        UUID facilityId,
-        UUID healthWorkerId,
-        LocalDateTime scheduledAt,
-        String appointmentType,
-        String status,
-        String notes
+    LocalDateTime scheduledAt,
+    String appointmentType,
+    String status,
+    UUID healthWorkerId,
+    String notes
 ) {}

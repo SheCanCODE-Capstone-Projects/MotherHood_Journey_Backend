@@ -1,125 +1,148 @@
 package com.motherhood.journey.government.service;
 
-import com.motherhood.journey.government.dto.Response.GovSyncLogResponse;
 import com.motherhood.journey.government.entity.GovSyncLog;
 import com.motherhood.journey.government.enums.SyncStatus;
+import com.motherhood.journey.government.enums.TargetSystem;
 import com.motherhood.journey.government.repository.GovSyncLogRepository;
-import com.motherhood.journey.identity.entity.User;
-import com.motherhood.journey.identity.enums.UserRole;
-import com.motherhood.journey.identity.repository.UserRepository;
-import com.motherhood.journey.notification.enums.NotificationType;
 import com.motherhood.journey.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class GovSyncService {
 
-    static final int MAX_RETRIES = 5;
+    private static final int MAX_RETRIES = 5;
 
-    private final GovSyncLogRepository govSyncLogRepository;
-    private final UserRepository userRepository;
+    private final GovSyncLogRepository syncLogRepository;
+    private final NidaApiClient nidaApiClient;
+    private final IremboApiClient iremboApiClient;
+    private final HmisApiClient hmisApiClient;
     private final NotificationService notificationService;
 
+    /**
+     * Called by the scheduler every 2 minutes.
+     * Picks up PENDING rows whose next_retry_at has passed and processes them.
+     */
     @Transactional
-    public void recordFailure(UUID logId, String errorMessage) {
-        GovSyncLog syncLog = findByIdOrThrow(logId);
+    public void processPendingEntries() {
+        List<GovSyncLog> pending = syncLogRepository
+                .findByStatusAndNextRetryAtLessThanEqualAndDeadLetterFalse(
+                        SyncStatus.PENDING, OffsetDateTime.now());
 
-        syncLog.setRetryCount(syncLog.getRetryCount() + 1);
-        syncLog.setErrorMessage(errorMessage);
+        log.info("GovSyncService: found {} pending entries to process", pending.size());
 
-        if (syncLog.getRetryCount() >= MAX_RETRIES) {
-            syncLog.setStatus(SyncStatus.DEAD_LETTER.name());
-            syncLog.setNextRetryAt(null);
-            govSyncLogRepository.save(syncLog);
-
-            alertMohAdmins(syncLog);
-
-            log.error("GovSyncLog {} marked DEAD_LETTER after {} retries — type={} system={}",
-                    syncLog.getId(), syncLog.getRetryCount(),
-                    syncLog.getSyncType(), syncLog.getTargetSystem());
-        } else {
-            syncLog.setStatus(SyncStatus.FAILED.name());
-            syncLog.setNextRetryAt(LocalDateTime.now().plusMinutes(30L * syncLog.getRetryCount()));
-            govSyncLogRepository.save(syncLog);
+        for (GovSyncLog entry : pending) {
+            processEntry(entry);
         }
     }
 
-    @Transactional(readOnly = true)
-    public List<GovSyncLogResponse> getAll(String status, String targetSystem) {
-        List<GovSyncLog> results;
+    private void processEntry(GovSyncLog entry) {
+        // Mark as in-flight so parallel runs don't pick up the same row
+        entry.setStatus(SyncStatus.IN_FLIGHT);
+        syncLogRepository.save(entry);
 
-        if (status != null && targetSystem != null) {
-            results = govSyncLogRepository.findByStatusAndTargetSystem(status, targetSystem);
-        } else if (status != null) {
-            results = govSyncLogRepository.findByStatus(status);
-        } else if (targetSystem != null) {
-            results = govSyncLogRepository.findByTargetSystem(targetSystem);
-        } else {
-            results = govSyncLogRepository.findAll();
+        try {
+            dispatchToTargetSystem(entry);
+            entry.setStatus(SyncStatus.SUCCEEDED);
+            entry.setLastError(null);
+            log.info("GovSync SUCCEEDED: id={} target={} ref={}",
+                    entry.getId(), entry.getTargetSystem(), entry.getReferenceNo());
+
+        } catch (Exception e) {
+            handleFailure(entry, e);
         }
 
-        return results.stream().map(GovSyncLogResponse::from).toList();
+        syncLogRepository.save(entry);
     }
 
+    private void dispatchToTargetSystem(GovSyncLog entry) {
+        switch (entry.getTargetSystem()) {
+            case NIDA -> {
+                Map<String, Object> p = entry.getPayload();
+                nidaApiClient.verifyIdentity(
+                        (String) p.get("nationalId"),
+                        (String) p.get("firstName"),
+                        (String) p.get("lastName")
+                );
+            }
+            case IREMBO -> {
+                iremboApiClient.submitServiceRequest(
+                        entry.getReferenceNo(),
+                        entry.getPayload()
+                );
+            }
+            case HMIS -> {
+                hmisApiClient.pushReport(
+                        entry.getReferenceNo(),
+                        entry.getPayload()
+                );
+            }
+        }
+    }
+
+    private void handleFailure(GovSyncLog entry, Exception e) {
+        int retries = entry.getRetryCount() + 1;
+        entry.setRetryCount(retries);
+        entry.setLastError(e.getMessage());
+
+        if (retries >= MAX_RETRIES) {
+            entry.setStatus(SyncStatus.DEAD_LETTER);
+            entry.setDeadLetter(true);
+            log.error("GovSync DEAD_LETTER: id={} target={} ref={} after {} retries",
+                    entry.getId(), entry.getTargetSystem(), entry.getReferenceNo(), retries);
+            sendDeadLetterAlert(entry);
+        } else {
+            // Exponential backoff: 2^retryCount minutes
+            long backoffMinutes = (long) Math.pow(2, retries);
+            entry.setStatus(SyncStatus.PENDING);
+            entry.setNextRetryAt(OffsetDateTime.now().plusMinutes(backoffMinutes));
+            log.warn("GovSync FAILED (retry {}/{}): id={} next_retry_at=+{}min error={}",
+                    retries, MAX_RETRIES, entry.getId(), backoffMinutes, e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a new outbox entry. Always call this BEFORE making any external API call.
+     * The scheduler will pick it up and execute the actual call.
+     */
     @Transactional
-    public GovSyncLogResponse retry(UUID logId) {
-        GovSyncLog syncLog = findByIdOrThrow(logId);
+    public GovSyncLog enqueue(TargetSystem targetSystem,
+                              String syncType,
+                              String referenceNo,
+                              String idempotencyKey,
+                              Map<String, Object> payload) {
 
-        if (!SyncStatus.DEAD_LETTER.name().equals(syncLog.getStatus())
-                && !SyncStatus.FAILED.name().equals(syncLog.getStatus())) {
-            throw new IllegalStateException(
-                    "Only DEAD_LETTER or FAILED entries can be manually retried. " +
-                            "Current status: " + syncLog.getStatus());
-        }
-
-        syncLog.setStatus(SyncStatus.PENDING.name());
-        syncLog.setRetryCount(0);
-        syncLog.setErrorMessage(null);
-        syncLog.setNextRetryAt(null);
-
-        GovSyncLog saved = govSyncLogRepository.save(syncLog);
-        log.info("GovSyncLog {} manually retried by MOH_ADMIN", logId);
-
-        return GovSyncLogResponse.from(saved);
+        // Idempotency guard: if already enqueued, return existing entry
+        return syncLogRepository.findByIdempotencyKey(idempotencyKey)
+                .orElseGet(() -> {
+                    GovSyncLog entry = GovSyncLog.builder()
+                            .idempotencyKey(idempotencyKey)
+                            .targetSystem(targetSystem)
+                            .syncType(syncType)
+                            .referenceNo(referenceNo)
+                            .payload(payload)
+                            .status(SyncStatus.PENDING)
+                            .nextRetryAt(OffsetDateTime.now()) // process immediately
+                            .build();
+                    return syncLogRepository.save(entry);
+                });
     }
 
-    // private helpers
-
-    private void alertMohAdmins(GovSyncLog syncLog) {
-        List<User> admins = userRepository.findByRole(UserRole.MOH_ADMIN);
-
-        if (admins.isEmpty()) {
-            log.warn("No MOH_ADMIN users found to alert for DEAD_LETTER sync log {}",
-                    syncLog.getId());
-            return;
-        }
-
+    private void sendDeadLetterAlert(GovSyncLog entry) {
         String message = String.format(
-                "ALERT: Sync DEAD_LETTER. Type: %s, System: %s, Key: %s. Manual retry required.",
-                syncLog.getSyncType(),
-                syncLog.getTargetSystem(),
-                syncLog.getIdempotencyKey()
+                "[ALERT] Gov sync DEAD_LETTER: system=%s type=%s ref=%s id=%s",
+                entry.getTargetSystem(), entry.getSyncType(),
+                entry.getReferenceNo(), entry.getId()
         );
-
-        for (User admin : admins) {
-            notificationService.enqueueRaw(admin, message, NotificationType.SERVICE_STATUS);
-            log.info("DEAD_LETTER alert sent to MOH_ADMIN {} — sync log {}",
-                    admin.getId(), syncLog.getId());
-        }
-    }
-
-    private GovSyncLog findByIdOrThrow(UUID id) {
-        return govSyncLogRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "GovSyncLog not found: " + id));
+        // Enqueue SMS to all MOH_ADMIN users — implementation delegates to NotificationService
+        notificationService.sendAdminAlert(message);
     }
 }

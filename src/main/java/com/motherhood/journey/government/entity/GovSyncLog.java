@@ -31,6 +31,10 @@ public class GovSyncLog {
     @JoinColumn(name = "facility_id")
     private Facility facility;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_request_id")
+    private ServiceRequest serviceRequest;
+
     @Column(name = "target_system", nullable = false, length = 16)
     private String targetSystem;
 
@@ -60,7 +64,7 @@ public class GovSyncLog {
     @Column(name = "next_retry_at")
     private LocalDateTime nextRetryAt;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

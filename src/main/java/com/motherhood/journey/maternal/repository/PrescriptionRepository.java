@@ -1,0 +1,14 @@
+package com.motherhood.journey.maternal.repository;
+
+import com.motherhood.journey.maternal.entity.Prescription;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface PrescriptionRepository extends JpaRepository<Prescription, UUID> {
+    List<Prescription> findByVisit_Id(UUID visitId);
+    List<Prescription> findByVisit_IdIn(List<UUID> visitIds);
+}
