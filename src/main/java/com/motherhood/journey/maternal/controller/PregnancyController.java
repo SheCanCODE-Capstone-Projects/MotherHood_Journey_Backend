@@ -1,11 +1,11 @@
 package com.motherhood.journey.maternal.controller;
 
-import com.motherhood.journey.maternal.dto.request.AssignChwRequest;
-import com.motherhood.journey.maternal.dto.request.ClosePregnancyRequest;
+import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.maternal.dto.request.CreatePregnancyRequest;
+import com.motherhood.journey.maternal.dto.request.UpdatePregnancyRequest;
 import com.motherhood.journey.maternal.dto.response.PregnancyResponse;
 import com.motherhood.journey.maternal.service.PregnancyService;
-import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,44 +15,52 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/mothers")
-@RequiredArgsConstructor
+@RequestMapping("/api/v1/pregnancies")
 public class PregnancyController {
 
     private final PregnancyService pregnancyService;
 
-    @GetMapping("/{motherId}/pregnancies")
-    @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','DISTRICT_OFFICER','MOH_ADMIN')")
-    public ResponseEntity<List<PregnancyResponse>> getObstetricHistory(
-            @PathVariable UUID motherId) {
-        return ResponseEntity.ok(pregnancyService.getObstetricHistory(motherId));
+    public PregnancyController(PregnancyService pregnancyService) {
+        this.pregnancyService = pregnancyService;
     }
 
-    @PostMapping("/{motherId}/pregnancies")
-    @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','MOH_ADMIN')")
-    public ResponseEntity<PregnancyResponse> openPregnancy(
-            @PathVariable UUID motherId,
-            @RequestBody CreatePregnancyRequest request) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(pregnancyService.openPregnancy(motherId, request));
+    @PostMapping
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    public ResponseEntity<ApiResponse<PregnancyResponse>> createPregnancy(
+        @Valid @RequestBody CreatePregnancyRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(ApiResponse.success(pregnancyService.createPregnancy(request), "Pregnancy recorded successfully"));
     }
 
-    @PatchMapping("/{motherId}/pregnancies/{pregnancyId}/assign-chw")
-    @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','MOH_ADMIN')")
-    public ResponseEntity<PregnancyResponse> assignChw(
-            @PathVariable UUID motherId,
-            @PathVariable UUID pregnancyId,
-            @RequestBody AssignChwRequest request) {
-        return ResponseEntity.ok(pregnancyService.assignChw(pregnancyId, request));
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    public ResponseEntity<ApiResponse<PregnancyResponse>> getPregnancyById(
+        @PathVariable UUID id,
+        @RequestParam UUID facilityId
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.success(pregnancyService.getPregnancyById(id, facilityId), "Pregnancy retrieved"));
     }
 
-    @PatchMapping("/{motherId}/pregnancies/{pregnancyId}/close")
-    @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','MOH_ADMIN')")
-    public ResponseEntity<PregnancyResponse> closePregnancy(
-            @PathVariable UUID motherId,
-            @PathVariable UUID pregnancyId,
-            @RequestBody ClosePregnancyRequest request) {
-        return ResponseEntity.ok(pregnancyService.closePregnancy(pregnancyId, request));
+    @GetMapping("/by-mother/{motherId}")
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    public ResponseEntity<ApiResponse<List<PregnancyResponse>>> getPregnanciesByMother(
+        @PathVariable UUID motherId,
+        @RequestParam UUID facilityId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+            pregnancyService.getPregnanciesByMother(motherId, facilityId), "Pregnancies retrieved"));
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    public ResponseEntity<ApiResponse<PregnancyResponse>> updatePregnancy(
+        @PathVariable UUID id,
+        @RequestParam UUID facilityId,
+        @Valid @RequestBody UpdatePregnancyRequest request
+    ) {
+        return ResponseEntity.ok(
+            ApiResponse.success(pregnancyService.updatePregnancy(id, facilityId, request), "Pregnancy updated"));
     }
 }

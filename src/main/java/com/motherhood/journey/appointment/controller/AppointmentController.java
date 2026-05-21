@@ -4,10 +4,13 @@ import com.motherhood.journey.appointment.dto.request.CreateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.request.UpdateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.response.AppointmentResponse;
 import com.motherhood.journey.appointment.service.AppointmentService;
-import lombok.RequiredArgsConstructor;
+import com.motherhood.journey.common.dto.ApiResponse;
+import com.motherhood.journey.maternal.enums.PatientType;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/appointments")
 @RequiredArgsConstructor
+@Validated
 public class AppointmentController {
 
     private final AppointmentService appointmentService;

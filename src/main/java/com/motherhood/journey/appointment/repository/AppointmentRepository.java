@@ -8,19 +8,20 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
-    @Query("""
-            SELECT a FROM Appointment a
-            JOIN FETCH a.facility
-            WHERE a.scheduledAt BETWEEN :from AND :to
-            AND a.reminderSent = false
-            """)
-    List<Appointment> findUpcomingUnreminded(
-            @Param("from") LocalDateTime from,
-            @Param("to") LocalDateTime to);
 
-    List<Appointment> findByPatientRefIdOrderByScheduledAtDesc(UUID patientRefId);
+    List<Appointment> findByFacility_Id(UUID facilityId);
+
+    Optional<Appointment> findByIdAndFacility_Id(UUID id, UUID facilityId);
+
+    List<Appointment> findByPatientRefIdAndPatientTypeAndFacility_Id(
+        UUID patientRefId, String patientType, UUID facilityId);
+
+    List<Appointment> findByFacility_IdAndStatus(UUID facilityId, String status);
+
+    long countByStatus(String status);
 }

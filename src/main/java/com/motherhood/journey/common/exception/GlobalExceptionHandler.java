@@ -1,8 +1,10 @@
 package com.motherhood.journey.common.exception;
 
-import com.motherhood.journey.common.Service.AuditLogService;
 import com.motherhood.journey.common.dto.ErrorResponseDTO;
+import com.motherhood.journey.common.service.AuditService;
 import jakarta.servlet.http.HttpServletRequest;
+import com.motherhood.journey.common.dto.ApiResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -17,35 +19,49 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import java.util.UUID;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    private final AuditLogService auditService;
-
-    public GlobalExceptionHandler(AuditLogService auditService) {
-        this.auditService = auditService;
+    @ExceptionHandler(CustomException.class)
+    public ResponseEntity<ApiResponse<?>> handleCustomException(CustomException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiResponse.error(ex.getMessage()));
     }
 
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponseDTO> handleResourceNotFound(
-            ResourceNotFoundException ex,
-            HttpServletRequest request) {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<?>> handleValidationException(MethodArgumentNotValidException ex) {
+        // Field names and default messages come from annotations — safe to reflect
+        String message = ex.getBindingResult().getFieldErrors().stream()
+            .map(e -> e.getField() + ": " + e.getDefaultMessage())
+            .reduce((a, b) -> a + "; " + b)
+            .orElse("Validation failed");
+        return ResponseEntity.badRequest().body(ApiResponse.error("Validation error: " + message));
+    }
 
-        String traceId = newTraceId();
-        log.warn("[{}] Resource not found – {} | path={}", traceId, ex.getMessage(), request.getRequestURI());
-        auditService.log("RESOURCE_NOT_FOUND", ex.getMessage(), request.getRequestURI(), traceId);
+    /** Handles @Validated constraint violations on @RequestParam / @PathVariable */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<?>> handleConstraintViolation(ConstraintViolationException ex) {
+        // Property paths and messages come from annotations — safe to reflect
+        String message = ex.getConstraintViolations().stream()
+            .map(v -> v.getPropertyPath() + ": " + v.getMessage())
+            .reduce((a, b) -> a + "; " + b)
+            .orElse("Constraint violation");
+        return ResponseEntity.badRequest().body(ApiResponse.error("Validation error: " + message));
+    }
 
-        ErrorResponseDTO body = ErrorResponseDTO.builder()
-                .timestamp(Instant.now())
-                .traceId(traceId)
-                .status(HttpStatus.NOT_FOUND.value())
-                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
-                .message(ex.getMessage())
-                .build();
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    /**
+     * Handles invalid enum values passed as @RequestParam (e.g. unknown FacilityType).
+     * ex.getValue() is user-supplied — sanitized before reflection to prevent log injection.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<?>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String safeValue = sanitize(String.valueOf(ex.getValue()));
+        String safeName  = sanitize(ex.getName());
+        return ResponseEntity.badRequest()
+            .body(ApiResponse.error("Invalid value '" + safeValue + "' for parameter '" + safeName + "'"));
     }
 
     @ExceptionHandler(UnauthorizedException.class)
@@ -104,26 +120,20 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDTO> handleGeneric(
-            Exception ex,
-            HttpServletRequest request) {
-
-        String traceId = newTraceId();
-        log.error("[{}] Unhandled exception | path={}", traceId, request.getRequestURI(), ex);
-        auditService.log("INTERNAL_ERROR", ex.getClass().getSimpleName(), request.getRequestURI(), traceId);
-
-        ErrorResponseDTO body = ErrorResponseDTO.builder()
-                .timestamp(Instant.now())
-                .traceId(traceId)
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("An unexpected error occurred. Please contact support with traceId: " + traceId)
-                .build();
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    public ResponseEntity<ApiResponse<?>> handleGeneralException(Exception ex) {
+        // Log internally with a correlation ID — never expose ex.getMessage() to the client
+        String correlationId = UUID.randomUUID().toString();
+        log.error("Unhandled exception [correlationId={}]: {}", correlationId, ex.getMessage(), ex);
+        return ResponseEntity.internalServerError()
+            .body(ApiResponse.error("An unexpected error occurred. Reference: " + correlationId));
     }
 
-    private String newTraceId() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+    /**
+     * Strips newline and carriage-return characters from user-supplied strings
+     * before they are reflected into responses or logs, preventing log injection (CWE-117).
+     */
+    private String sanitize(String input) {
+        if (input == null) return "";
+        return input.replaceAll("[\r\n]", "").trim();
     }
 }

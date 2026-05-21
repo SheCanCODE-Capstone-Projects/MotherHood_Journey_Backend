@@ -8,9 +8,10 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AppointmentService {
-    AppointmentResponse create(CreateAppointmentRequest request);
-    AppointmentResponse update(UUID id, UpdateAppointmentRequest request);
-    AppointmentResponse getById(UUID id);
-    List<AppointmentResponse> getByPatient(UUID patientRefId);
-    void sendUpcomingReminders();
+    AppointmentResponse createAppointment(CreateAppointmentRequest request);
+    AppointmentResponse getAppointmentById(UUID id, UUID facilityId);
+    List<AppointmentResponse> getAppointmentsByFacility(UUID facilityId);
+    List<AppointmentResponse> getAppointmentsByPatient(UUID patientRefId, String patientType, UUID facilityId);
+    AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request);
+    void cancelAppointment(UUID id, UUID facilityId);
 }

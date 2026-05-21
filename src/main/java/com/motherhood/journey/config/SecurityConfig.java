@@ -1,7 +1,5 @@
 package com.motherhood.journey.config;
 
-import com.motherhood.journey.identity.enums.UserRole;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,6 +8,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfigurationSource;
+import com.motherhood.journey.identity.enums.UserRole;
 
 @Configuration
 @EnableWebSecurity
@@ -49,7 +48,7 @@ public class SecurityConfig {
                         .hasAnyRole(
                                 UserRole.HEALTH_WORKER.name(),
                                 UserRole.FACILITY_ADMIN.name(),
-                               UserRole.PATIENT.name()
+                                UserRole.PATIENT.name()
                         )
                         .requestMatchers("/api/v1/reports/**")
                         .hasAnyRole(

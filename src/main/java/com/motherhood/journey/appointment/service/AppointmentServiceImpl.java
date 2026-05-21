@@ -5,18 +5,25 @@ import com.motherhood.journey.appointment.dto.request.UpdateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.response.AppointmentResponse;
 import com.motherhood.journey.appointment.entity.Appointment;
 import com.motherhood.journey.appointment.repository.AppointmentRepository;
-import com.motherhood.journey.child.entity.Child;
+import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
+import com.motherhood.journey.facility.repository.FacilityRepository;
+import com.motherhood.journey.geo.repository.GeoRepository;
 import com.motherhood.journey.identity.entity.User;
-import com.motherhood.journey.maternal.entity.Mother;
-import com.motherhood.journey.notification.enums.NotificationType;
-import com.motherhood.journey.notification.service.NotificationService;
-import jakarta.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import com.motherhood.journey.identity.repository.UserRepository;
+import com.motherhood.journey.security.FacilityAuthDetails;
+import com.motherhood.journey.security.FacilityScope;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -25,157 +32,119 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
+@Transactional
 public class AppointmentServiceImpl implements AppointmentService {
 
+    private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
+
     private final AppointmentRepository appointmentRepository;
-    private final NotificationService notificationService;
-    private final EntityManager entityManager;
+    private final FacilityRepository facilityRepository;
+    private final GeoRepository geoRepository;
+    private final UserRepository userRepository;
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
-
-    @Override
-    @Transactional
-    public AppointmentResponse create(CreateAppointmentRequest request) {
-        Facility facility = entityManager.getReference(Facility.class, request.facilityId());
-        User healthWorker = request.healthWorkerId() != null
-                ? entityManager.getReference(User.class, request.healthWorkerId()) : null;
-        GeoLocation geo = request.geoLocationId() != null
-                ? entityManager.getReference(GeoLocation.class, request.geoLocationId()) : null;
-
-        Appointment appointment = Appointment.builder()
-                .patientRefId(request.patientRefId())
-                .patientType(request.patientType())
-                .facility(facility)
-                .healthWorker(healthWorker)
-                .geoLocation(geo)
-                .scheduledAt(request.scheduledAt())
-                .appointmentType(request.appointmentType())
-                .notes(request.notes())
-                .build();
-
-        return AppointmentResponse.from(appointmentRepository.save(appointment));
+    public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
+                                  FacilityRepository facilityRepository,
+                                  GeoRepository geoRepository,
+                                  UserRepository userRepository) {
+        this.appointmentRepository = appointmentRepository;
+        this.facilityRepository = facilityRepository;
+        this.geoRepository = geoRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
-    @Transactional
-    public AppointmentResponse update(UUID id, UpdateAppointmentRequest request) {
-        Appointment appointment = findByIdOrThrow(id);
+    public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isCrossFacility = auth.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(CROSS_FACILITY_ROLES::contains);
 
-        if (request.facilityId() != null)
-            appointment.setFacility(entityManager.getReference(Facility.class, request.facilityId()));
-        if (request.healthWorkerId() != null)
-            appointment.setHealthWorker(entityManager.getReference(User.class, request.healthWorkerId()));
-        if (request.scheduledAt() != null)
-            appointment.setScheduledAt(request.scheduledAt());
-        if (request.appointmentType() != null)
-            appointment.setAppointmentType(request.appointmentType());
-        if (request.status() != null)
-            appointment.setStatus(request.status());
-        if (request.notes() != null)
-            appointment.setNotes(request.notes());
-
-        return AppointmentResponse.from(appointmentRepository.save(appointment));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public AppointmentResponse getById(UUID id) {
-        return AppointmentResponse.from(findByIdOrThrow(id));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<AppointmentResponse> getByPatient(UUID patientRefId) {
-        return appointmentRepository
-                .findByPatientRefIdOrderByScheduledAtDesc(patientRefId)
-                .stream()
-                .map(AppointmentResponse::from)
-                .toList();
-    }
-
-    // reminder logic
-
-    @Override
-    @Transactional
-    public void sendUpcomingReminders() {
-        LocalDateTime from = LocalDateTime.now().plusHours(23);
-        LocalDateTime to   = LocalDateTime.now().plusHours(25);
-
-        List<Appointment> upcoming = appointmentRepository.findUpcomingUnreminded(from, to);
-
-        for (Appointment appointment : upcoming) {
-            try {
-                User patient = resolvePatientUser(appointment);
-                String message = buildMessage(appointment, patient.getPreferredLanguage());
-
-                notificationService.enqueueRaw(
-                        patient,
-                        message,
-                        NotificationType.APPOINTMENT
-                );
-
-                appointment.setReminderSent(true);
-                appointmentRepository.save(appointment);
-
-                log.info("Reminder sent for appointment {} — patient {} — lang {}",
-                        appointment.getId(), appointment.getPatientRefId(),
-                        patient.getPreferredLanguage());
-
-            } catch (Exception e) {
-                // log and continue — one failure must not stop other reminders
-                log.error("Failed to send reminder for appointment {}: {}",
-                        appointment.getId(), e.getMessage());
+        if (!isCrossFacility) {
+            UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd
+                ? fd.facilityId() : null;
+            if (jwtFacilityId == null || !jwtFacilityId.equals(request.facilityId())) {
+                throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
             }
         }
 
-        log.info("Appointment reminder scan complete — {} reminders sent", upcoming.size());
-    }
+        Facility facility = facilityRepository.findById(request.facilityId())
+            .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
 
-    // helpers
-
-    private User resolvePatientUser(Appointment appointment) {
-        if ("MOTHER".equals(appointment.getPatientType())) {
-            Mother mother = entityManager.find(Mother.class, appointment.getPatientRefId());
-            if (mother == null) throw new IllegalStateException(
-                    "Mother not found: " + appointment.getPatientRefId());
-            return mother.getUser();
+        User healthWorker = null;
+        if (request.healthWorkerId() != null) {
+            healthWorker = userRepository.findById(request.healthWorkerId())
+                .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
         }
 
-        if ("CHILD".equals(appointment.getPatientType())) {
-            Child child = entityManager.find(Child.class, appointment.getPatientRefId());
-            if (child == null) throw new IllegalStateException(
-                    "Child not found: " + appointment.getPatientRefId());
-            return child.getMother().getUser();
+        GeoLocation geoLocation = null;
+        if (request.geoLocationId() != null) {
+            geoLocation = geoRepository.findById(request.geoLocationId())
+                .orElseThrow(() -> new CustomException("GeoLocation not found", HttpStatus.NOT_FOUND));
         }
 
-        throw new IllegalArgumentException(
-                "Unknown patient type: " + appointment.getPatientType());
+        Appointment appointment = Appointment.builder()
+            .patientRefId(request.patientRefId())
+            .patientType(request.patientType().name())
+            .facility(facility)
+            .healthWorker(healthWorker)
+            .geoLocation(geoLocation)
+            .scheduledAt(request.scheduledAt())
+            .appointmentType(request.appointmentType())
+            .notes(request.notes())
+            .build();
+
+        return AppointmentResponse.from(appointmentRepository.save(appointment));
     }
 
-    private String buildMessage(Appointment appointment, String language) {
-        String date     = appointment.getScheduledAt().format(DATE_FMT);
-        String time     = appointment.getScheduledAt().format(TIME_FMT);
-        String facility = appointment.getFacility().getName();
-        String type     = appointment.getAppointmentType();
-
-        return switch (language) {
-            case "rw" -> String.format(
-                    "Icyibutsa: Ufite igikorwa cya %s kuri %s ku %s saa %s.",
-                    type, facility, date, time);
-            case "fr" -> String.format(
-                    "Rappel: Vous avez un rendez-vous %s a %s le %s a %s.",
-                    type, facility, date, time);
-            default  -> String.format(
-                    "Reminder: You have a %s appointment at %s on %s at %s.",
-                    type, facility, date, time);
-        };
+    @Override
+    @FacilityScope
+    @Transactional(readOnly = true)
+    public AppointmentResponse getAppointmentById(UUID id, UUID facilityId) {
+        return AppointmentResponse.from(findByIdAndFacility(id, facilityId));
     }
 
-    private Appointment findByIdOrThrow(UUID id) {
-        return appointmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Appointment not found: " + id));
+    @Override
+    @FacilityScope
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getAppointmentsByFacility(UUID facilityId) {
+        return appointmentRepository.findByFacility_Id(facilityId).stream()
+            .map(AppointmentResponse::from)
+            .toList();
+    }
+
+    @Override
+    @FacilityScope
+    @Transactional(readOnly = true)
+    public List<AppointmentResponse> getAppointmentsByPatient(UUID patientRefId, String patientType, UUID facilityId) {
+        return appointmentRepository
+            .findByPatientRefIdAndPatientTypeAndFacility_Id(patientRefId, patientType, facilityId)
+            .stream().map(AppointmentResponse::from).toList();
+    }
+
+    @Override
+    @FacilityScope
+    public AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request) {
+        Appointment appointment = findByIdAndFacility(id, facilityId);
+        if (request.scheduledAt() != null)    appointment.setScheduledAt(request.scheduledAt());
+        if (request.appointmentType() != null) appointment.setAppointmentType(request.appointmentType());
+        if (request.status() != null)         appointment.setStatus(request.status());
+        if (request.notes() != null)          appointment.setNotes(request.notes());
+        if (request.healthWorkerId() != null) {
+            User hw = userRepository.findById(request.healthWorkerId())
+                .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
+            appointment.setHealthWorker(hw);
+        }
+        return AppointmentResponse.from(appointment);
+    }
+
+    @Override
+    @FacilityScope
+    public void cancelAppointment(UUID id, UUID facilityId) {
+        findByIdAndFacility(id, facilityId).setStatus("CANCELLED");
+    }
+
+    private Appointment findByIdAndFacility(UUID id, UUID facilityId) {
+        return appointmentRepository.findByIdAndFacility_Id(id, facilityId)
+            .orElseThrow(() -> new CustomException("Appointment not found", HttpStatus.NOT_FOUND));
     }
 }
