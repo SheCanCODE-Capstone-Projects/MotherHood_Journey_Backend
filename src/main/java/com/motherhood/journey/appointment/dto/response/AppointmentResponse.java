@@ -6,33 +6,33 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record AppointmentResponse(
-    UUID id,
-    UUID patientRefId,
-    String patientType,
-    UUID facilityId,
-    UUID healthWorkerId,
-    UUID geoLocationId,
-    LocalDateTime scheduledAt,
-    String appointmentType,
-    String status,
-    Boolean reminderSent,
-    String notes,
-    LocalDateTime createdAt
+        UUID id,
+        UUID patientRefId,
+        String patientType,
+        UUID facilityId,
+        String facilityName,
+        UUID healthWorkerId,
+        LocalDateTime scheduledAt,
+        String appointmentType,
+        String status,
+        Boolean reminderSent,
+        String notes,
+        LocalDateTime createdAt
 ) {
     public static AppointmentResponse from(Appointment a) {
         return new AppointmentResponse(
-            a.getId(),
-            a.getPatientRefId(),
-            a.getPatientType(),
-            a.getFacility().getId(),
-            a.getHealthWorker() != null ? a.getHealthWorker().getId() : null,
-            a.getGeoLocation() != null ? a.getGeoLocation().getId() : null,
-            a.getScheduledAt(),
-            a.getAppointmentType(),
-            a.getStatus(),
-            a.getReminderSent(),
-            a.getNotes(),
-            a.getCreatedAt()
+                a.getId(),
+                a.getPatientRefId(),
+                a.getPatientType(),
+                a.getFacility().getId(),
+                a.getFacility().getName(),
+                a.getHealthWorker() != null ? a.getHealthWorker().getId() : null,
+                a.getScheduledAt(),
+                a.getAppointmentType(),
+                a.getStatus(),
+                a.getReminderSent(),
+                a.getNotes(),
+                a.getCreatedAt()
         );
     }
 }

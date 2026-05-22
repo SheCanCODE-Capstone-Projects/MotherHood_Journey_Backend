@@ -25,6 +25,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.UUID;
+
+@Slf4j
 @Service
 @Transactional
 public class AppointmentServiceImpl implements AppointmentService {
