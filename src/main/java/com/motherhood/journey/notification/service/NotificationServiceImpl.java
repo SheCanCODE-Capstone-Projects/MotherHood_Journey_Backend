@@ -9,6 +9,7 @@ import com.motherhood.journey.notification.entity.SmsNotification;
 import com.motherhood.journey.notification.enums.NotificationStatus;
 import com.motherhood.journey.notification.enums.NotificationType;
 import com.motherhood.journey.notification.repository.NotificationRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class NotificationServiceImpl implements NotificationService {
 
@@ -26,20 +28,16 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final AfricasTalkingClient africasTalkingClient;
 
-    public NotificationServiceImpl(NotificationRepository notificationRepository,
-                                   UserRepository userRepository,
-                                   AfricasTalkingClient africasTalkingClient) {
-        this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
-        this.africasTalkingClient = africasTalkingClient;
-    }
-
+    // Queues a new SMS notification to be sent
     @Override
     @Transactional
     public NotificationResponse enqueue(SendNotificationRequest request) {
-        User recipient = userRepository.findById(request.getRecipientUserId())
-                .orElseThrow(() -> new IllegalArgumentException("Recipient user not found"));
 
+        User recipient = userRepository.findById(request.getRecipientUserId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Recipient user not found"));
+
+        // Use provided phone number or fall back to user's phone
         String phone = request.getPhoneNumber();
         if (phone == null || phone.isBlank()) {
             phone = recipient.getPhoneNumber();
@@ -51,21 +49,23 @@ public class NotificationServiceImpl implements NotificationService {
                 .messageBody(request.getMessage())
                 .notificationType(request.getNotificationType().name())
                 .status(NotificationStatus.QUEUED.name())
-                .scheduledAt(request.getScheduledAt() == null ? LocalDateTime.now() : request.getScheduledAt())
+                .scheduledAt(request.getScheduledAt() == null
+                        ? LocalDateTime.now()
+                        : request.getScheduledAt())
                 .retryCount(0)
                 .build();
 
         SmsNotification saved = notificationRepository.save(notification);
-        return toResponse(saved);
+        return convertToResponse(saved);
     }
 
+    // Called by the scheduler every minute
     @Override
     @Transactional
     public void processQueuedNotifications() {
+
         List<SmsNotification> queued = notificationRepository
-                .findByStatusAndScheduledAtLessThanEqualOrderByScheduledAtAsc(
-                        NotificationStatus.QUEUED.name(), LocalDateTime.now()
-                );
+                .findDueNotifications(LocalDateTime.now());
 
         if (queued.isEmpty()) {
             return;
@@ -84,19 +84,24 @@ public class NotificationServiceImpl implements NotificationService {
                 notification.setSentAt(LocalDateTime.now());
                 notification.setAtMessageId(atMessageId);
                 notificationRepository.save(notification);
+
             } catch (Exception ex) {
+
                 int nextRetry = notification.getRetryCount() + 1;
                 notification.setRetryCount(nextRetry);
 
                 if (nextRetry >= MAX_RETRIES) {
-                    notification.setStatus(NotificationStatus.FAILED.name());
-                    log.error("SMS notification permanently failed: id={} error={}",
+                    notification.setStatus(
+                            NotificationStatus.FAILED.name());
+                    log.error("SMS permanently failed: id={} error={}",
                             notification.getId(), ex.getMessage());
                 } else {
                     long backoffMinutes = (long) Math.pow(2, nextRetry);
-                    notification.setScheduledAt(LocalDateTime.now().plusMinutes(backoffMinutes));
-                    log.warn("SMS notification failed: id={} retry={}/{} next={}m error={}",
-                            notification.getId(), nextRetry, MAX_RETRIES, backoffMinutes, ex.getMessage());
+                    notification.setScheduledAt(
+                            LocalDateTime.now().plusMinutes(backoffMinutes));
+                    log.warn("SMS failed: id={} retry={}/{} next={}m",
+                            notification.getId(), nextRetry,
+                            MAX_RETRIES, backoffMinutes);
                 }
 
                 notificationRepository.save(notification);
@@ -104,22 +109,29 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    // Sends emergency alert to all MOH_ADMIN users
     @Override
     @Transactional
     public void sendAdminAlert(String message) {
-        List<User> admins = userRepository.findByRoleAndActiveTrue(UserRole.MOH_ADMIN.name());
+
+        List<User> admins = userRepository
+                .findByRoleAndActiveTrue(UserRole.MOH_ADMIN.name());
+
         if (admins.isEmpty()) {
-            log.warn("No active MOH_ADMIN users found. Alert not queued: {}", message);
+            log.warn("No active MOH_ADMIN users found. Alert: {}",
+                    message);
             return;
         }
 
         LocalDateTime now = LocalDateTime.now();
+
         List<SmsNotification> alerts = admins.stream()
                 .map(admin -> SmsNotification.builder()
                         .recipientUser(admin)
                         .phoneNumber(admin.getPhoneNumber())
                         .messageBody(message)
-                        .notificationType(NotificationType.EMERGENCY.name())
+                        .notificationType(
+                                NotificationType.EMERGENCY.name())
                         .status(NotificationStatus.QUEUED.name())
                         .scheduledAt(now)
                         .retryCount(0)
@@ -127,21 +139,31 @@ public class NotificationServiceImpl implements NotificationService {
                 .toList();
 
         notificationRepository.saveAll(alerts);
-        log.info("Queued admin alert for {} MOH_ADMIN users", alerts.size());
+        log.info("Queued admin alert for {} MOH_ADMIN users",
+                alerts.size());
     }
 
-    private NotificationResponse toResponse(SmsNotification notification) {
+    // Converts SmsNotification entity to NotificationResponse DTO
+    private NotificationResponse convertToResponse(
+            SmsNotification notification) {
+
         return NotificationResponse.builder()
                 .id(notification.getId())
-                .recipientUserId(notification.getRecipientUser() == null ? null : notification.getRecipientUser().getId())
+                .recipientUserId(
+                        notification.getRecipientUser() == null
+                                ? null
+                                : notification.getRecipientUser().getId())
                 .phoneNumber(notification.getPhoneNumber())
                 .messageBody(notification.getMessageBody())
-                .notificationType(NotificationType.valueOf(notification.getNotificationType()))
-                .status(NotificationStatus.valueOf(notification.getStatus()))
+                .notificationType(NotificationType.valueOf(
+                        notification.getNotificationType()))
+                .status(NotificationStatus.valueOf(
+                        notification.getStatus()))
                 .atMessageId(notification.getAtMessageId())
                 .scheduledAt(notification.getScheduledAt())
                 .sentAt(notification.getSentAt())
                 .retryCount(notification.getRetryCount())
+                .createdAt(notification.getCreatedAt())
                 .build();
     }
 }
