@@ -9,7 +9,7 @@
 
 ## Authentication
 
-### POST /api/v1/auth/register Register a new user
+### POST /api/v1/auth/register a new user
 **Access:** Public
 
 **Request:**
@@ -49,7 +49,7 @@
 
 ---
 
-### POST /api/v1/auth/login Login
+### POST /api/v1/auth/login
 **Access:** Public
 
 **Request:**
@@ -77,7 +77,7 @@
 
 ## Current User
 
-### GET /api/v1/me — Get my profile
+### GET /api/v1/me Get my profile
 **Access:** Any authenticated user
 
 **Response:** `200 OK`
@@ -103,12 +103,12 @@
 
 ## Users
 
-### GET /api/v1/users/{id} — Get user by ID
+### GET /api/v1/users/{id} Get user by ID
 **Access:** `FACILITY_ADMIN | MOH_ADMIN | DISTRICT_OFFICER`
 
 **Response:** `200 OK` — returns full `UserResponse` with all fields.
 
-### PATCH /api/v1/users/{id} — Update user
+### PATCH /api/v1/users/{id} Update user
 **Access:** `FACILITY_ADMIN | MOH_ADMIN`
 
 **Request:**
@@ -125,10 +125,10 @@
 
 > All `/api/v1/admin/**` endpoints require role `MOH_ADMIN`.
 
-### GET /api/v1/admin/dashboard — System dashboard
+### GET /api/v1/admin/dashboard System dashboard
 **Access:** `MOH_ADMIN`
 
-⚠️ **Status: FAILING (Bug #1)** — Returns `500 Internal Server Error`. The individual count queries work at the SQL level; a server-side Hibernate session or serialization exception occurs. Requires application log inspection to identify the root cause.
+⚠️ **Status: FAILING (Bug #1)** Returns `500 Internal Server Error`. The individual count queries work at the SQL level; a server-side Hibernate session or serialization exception occurs. Requires application log inspection to identify the root cause.
 
 **Expected Response:**
 ```json
@@ -153,7 +153,7 @@
 
 **Response:** `200 OK` paginated list of `UserResponse` Working
 
-### PATCH /api/v1/admin/users/{id}/deactivate Deactivate user
+### PATCH /api/v1/admin/users/{id}/deactivate user
 **Access:** `MOH_ADMIN`
 **Response:** `200 OK` with updated user (`active: false`) Working
 
@@ -188,7 +188,7 @@
 ### GET /api/v1/geo/resolve?province={}&district={}&sector={}&cell={}&village={}
 **Response:** `200 OK` full `GeoResponse` object with UUID
 
-### GET /api/v1/geo/{id}/summary — Get location summary by UUID
+### GET /api/v1/geo/{id}/summary Get location summary by UUID
 **Response:** `200 OK`
 ```json
 {
@@ -221,24 +221,24 @@
 
 **Response:** `201 Created` Working
 
-### GET /api/v1/facilities — List facilities (paginated)
+### GET /api/v1/facilities List facilities (paginated)
 **Access:** Any authenticated user
 
 **Query params:** `district`, `facilityType`, `page`, `size`
 
-**Response:** `200 OK` — paginated facilities ✅ Working
+**Response:** `200 OK` paginated facilities Working
 
-### GET /api/v1/facilities/{id} — Get facility by ID
+### GET /api/v1/facilities/{id} Get facility by ID
 **Access:** Any authenticated user
-**Response:** `200 OK` ✅ Working
+**Response:** `200 OK` Working
 
-### PUT /api/v1/facilities/{id} — Update facility
+### PUT /api/v1/facilities/{id} Update facility
 **Access:** `FACILITY_ADMIN | MOH_ADMIN`
-**Response:** `200 OK` ✅ Working
+**Response:** `200 OK` Working
 
-### DELETE /api/v1/facilities/{id} — Delete (soft) facility
+### DELETE /api/v1/facilities/{id} Delete (soft) facility
 **Access:** `MOH_ADMIN`
-**Response:** `204 No Content` ✅ Working
+**Response:** `204 No Content` Working
 
 ---
 
@@ -246,7 +246,7 @@
 
 > ⚠️ **Security Bug #2:** `SecurityConfig` restricts `/api/v1/mothers/**` to `HEALTH_WORKER` and `FACILITY_ADMIN` only at the URL filter level, but `MotherController` methods use `@PreAuthorize` allowing `MOH_ADMIN` and `DISTRICT_OFFICER`. The URL-level rule takes precedence and blocks those roles with `403`.
 
-### POST /api/v1/mothers — Register mother
+### POST /api/v1/mothers Register mother
 **Access:** Any authenticated user (no URL restriction; uses no `@PreAuthorize`)
 
 **Request:**
@@ -262,20 +262,20 @@
 ```
 **Valid educationLevel:** `PRIMARY | SECONDARY | TERTIARY | NONE`
 
-**Response:** `201 Created` ✅ Working  
+**Response:** `201 Created` Working  
 > ⚠️ **Prerequisite:** The DB sequence `seq_mother_health_id` must exist. It was absent from migrations and must be created manually:  
 > `CREATE SEQUENCE seq_mother_health_id START 1 INCREMENT 1;`
 
-### GET /api/v1/mothers/{id} — Get mother by ID
+### GET /api/v1/mothers/{id} Get mother by ID
 **Access:** `HEALTH_WORKER | FACILITY_ADMIN` (URL filter), with method-level `@PreAuthorize` also allowing `MOH_ADMIN | DISTRICT_OFFICER | GOVERNMENT_ANALYST`
 
 ⚠️ **Status: FAILING (Bug #3)** — Returns `500 Internal Server Error` even with `HEALTH_WORKER` token. Likely a `LazyInitializationException` when `enforceScope()` accesses lazy-loaded `mother.getFacility()` or `caller.getFacilityId()` outside an active Hibernate session.
 
-### GET /api/v1/mothers/health/{healthId} — Get mother by health ID
+### GET /api/v1/mothers/health/{healthId} Get mother by health ID
 **Access:** Same as above (URL-level restriction applies)
 
-### GET /api/v1/mothers/pending-nida — List mothers awaiting NIDA verification
-**Access:** `MOH_ADMIN | FACILITY_ADMIN` (URL-level blocks MOH_ADMIN; accessible only via FACILITY_ADMIN)
+### GET /api/v1/mothers/pending-nida List mothers awaiting NIDA verification
+**Access:** `MOH_ADMIN | FACILITY_ADMIN` (URL level blocks MOH_ADMIN; accessible only via FACILITY_ADMIN)
 
 ---
 
@@ -283,7 +283,7 @@
 
 > ⚠️ **Security Bug #2 (same):** `/api/v1/children/**` restricted to `HEALTH_WORKER | FACILITY_ADMIN` at URL level. `MOH_ADMIN | DISTRICT_OFFICER` get `403`.
 
-### POST /api/v1/children — Register child
+### POST /api/v1/children Register child
 **Access:** `HEALTH_WORKER | FACILITY_ADMIN` (URL)
 
 **Request:**
@@ -302,19 +302,19 @@
 **Valid gender:** `MALE | FEMALE | UNKNOWN`  
 **Valid deliveryType:** `NORMAL | CAESAREAN | ASSISTED`
 
-**Response:** `201 Created` ✅ Working
+**Response:** `201 Created` Working
 
-### GET /api/v1/children/{id}?facilityId={} — Get child by ID
+### GET /api/v1/children/{id}?facilityId={} Get child by ID
 **Access:** `HEALTH_WORKER | FACILITY_ADMIN | MOH_ADMIN | DISTRICT_OFFICER` (but URL filter restricts)
-**Response:** `200 OK` ✅ Working
+**Response:** `200 OK` Working
 
-### GET /api/v1/children/by-mother/{motherId}?facilityId={} — Children by mother
-**Response:** `200 OK` paginated ✅ Working
+### GET /api/v1/children/by-mother/{motherId}?facilityId={} Children by mother
+**Response:** `200 OK` paginated Working
 
-### GET /api/v1/children/by-facility/{facilityId} — Children by facility
-**Response:** `200 OK` paginated ✅ Working
+### GET /api/v1/children/by-facility/{facilityId} Children by facility
+**Response:** `200 OK` paginated Working
 
-### PATCH /api/v1/children/{id}?facilityId={} — Update child
+### PATCH /api/v1/children/{id}?facilityId={} Update child
 **Request:**
 ```json
 {
@@ -322,17 +322,17 @@
   "healthStatus": "HEALTHY"
 }
 ```
-**Response:** `200 OK` ✅ Working
+**Response:** `200 OK` Working
 
 ---
 
 ## Vaccinations
 
-### GET /api/v1/vaccinations/by-child/{childId}?facilityId={} — Get vaccination records
+### GET /api/v1/vaccinations/by-child/{childId}?facilityId={} Get vaccination records
 **Access:** `HEALTH_WORKER | FACILITY_ADMIN | MOH_ADMIN | DISTRICT_OFFICER`
-**Response:** `200 OK` — list of vaccination records (empty if no schedules seeded) ✅ Working
+**Response:** `200 OK` list of vaccination records (empty if no schedules seeded) Working
 
-### PATCH /api/v1/vaccinations/{id}/administer?facilityId={} — Administer vaccination
+### PATCH /api/v1/vaccinations/{id}/administer?facilityId={} Administer vaccination
 **Access:** `HEALTH_WORKER | FACILITY_ADMIN | MOH_ADMIN`
 
 **Request:**
@@ -349,7 +349,7 @@
 
 ## Pregnancies
 
-### POST /api/v1/pregnancies — Record pregnancy
+### POST /api/v1/pregnancies Record pregnancy
 **Access:** `HEALTH_WORKER | FACILITY_ADMIN | MOH_ADMIN`
 
 **Request:**
@@ -363,15 +363,15 @@
   "para": 0
 }
 ```
-**Response:** `201 Created` ✅ Working
+**Response:** `201 Created` Working
 
 ### GET /api/v1/pregnancies/{id}?facilityId={} — Get pregnancy
-**Response:** `200 OK` ✅ Working
+**Response:** `200 OK` Working
 
-### GET /api/v1/pregnancies/by-mother/{motherId}?facilityId={} — List by mother
-**Response:** `200 OK` — array of pregnancies ✅ Working
+### GET /api/v1/pregnancies/by-mother/{motherId}?facilityId={}  List by mother
+**Response:** `200 OK` array of pregnancies Working
 
-### PATCH /api/v1/pregnancies/{id}?facilityId={} — Update pregnancy
+### PATCH /api/v1/pregnancies/{id}?facilityId={}  Update pregnancy
 **Request:**
 ```json
 {
