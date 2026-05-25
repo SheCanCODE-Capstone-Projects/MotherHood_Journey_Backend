@@ -29,7 +29,7 @@ import java.util.UUID;
 
 @Service
 @Transactional
-public class MotherServiceImpl implements MotherService {
+public class MotherServiceImpl {
 
     private static final Set<String> CROSS_FACILITY_ROLES = Set.of("ROLE_MOH_ADMIN", "ROLE_DISTRICT_OFFICER");
 
@@ -51,7 +51,7 @@ public class MotherServiceImpl implements MotherService {
         this.auditService = auditService;
     }
 
-    @Override
+
     public MotherResponse createMother(CreateMotherRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         boolean isCrossFacility = auth.getAuthorities().stream()
@@ -91,39 +91,41 @@ public class MotherServiceImpl implements MotherService {
         return MotherResponse.from(saved);
     }
 
-    @Override
+
     @FacilityScope
     @Transactional(readOnly = true)
     public MotherResponse getMotherById(UUID id, UUID facilityId) {
-        Mother mother = motherRepository.findByIdAndFacility_Id(id, facilityId)
+        Mother mother = motherRepository.findById(id)
+            .filter(m -> m.getFacility() != null && facilityId.equals(m.getFacility().getId()))
             .orElseThrow(() -> new CustomException("Mother not found", HttpStatus.NOT_FOUND));
         return MotherResponse.from(mother);
     }
 
-    @Override
+
     @FacilityScope
     @Transactional(readOnly = true)
     public List<MotherResponse> getMothersByFacility(UUID facilityId) {
-        return motherRepository.findByFacility_Id(facilityId).stream()
+        return motherRepository.findByFacilityId(facilityId).stream()
             .map(MotherResponse::from)
             .toList();
     }
 
-    @Override
+
     @FacilityScope
     public MotherResponse updateMother(UUID id, UUID facilityId, UpdateMotherRequest request) {
-        Mother mother = motherRepository.findByIdAndFacility_Id(id, facilityId)
+        Mother mother = motherRepository.findById(id)
+            .filter(m -> m.getFacility() != null && facilityId.equals(m.getFacility().getId()))
             .orElseThrow(() -> new CustomException("Mother not found", HttpStatus.NOT_FOUND));
-        if (request.educationLevel() != null)    mother.setEducationLevel(request.educationLevel());
-        if (request.nidaVerifiedStatus() != null) mother.setNidaVerifiedStatus(request.nidaVerifiedStatus());
+        if (request.educationLevel() != null)    mother.setEducationLevel(request.educationLevel().name());
         auditService.log(AuditAction.UPDATE, "MOTHER", id);
         return MotherResponse.from(mother);
     }
 
-    @Override
+
     @FacilityScope
     public void deactivateMother(UUID id, UUID facilityId) {
-        Mother mother = motherRepository.findByIdAndFacility_Id(id, facilityId)
+        Mother mother = motherRepository.findById(id)
+            .filter(m -> m.getFacility() != null && facilityId.equals(m.getFacility().getId()))
             .orElseThrow(() -> new CustomException("Mother not found", HttpStatus.NOT_FOUND));
         if (mother.getUser() != null) mother.getUser().setActive(false);
         auditService.log(AuditAction.DELETE, "MOTHER", id);

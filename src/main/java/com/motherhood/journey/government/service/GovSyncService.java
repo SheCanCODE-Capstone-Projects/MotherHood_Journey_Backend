@@ -22,7 +22,7 @@ public class GovSyncService {
     private static final int MAX_RETRIES = 5;
 
     private final GovSyncLogRepository syncLogRepository;
-    private final NidaApiClient nidaApiClient;
+    private final GovNidaApiClient nidaApiClient;
     private final IremboApiClient iremboApiClient;
     private final HmisApiClient hmisApiClient;
     private final NotificationService notificationService;

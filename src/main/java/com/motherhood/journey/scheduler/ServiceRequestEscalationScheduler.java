@@ -78,9 +78,15 @@ public class ServiceRequestEscalationScheduler {
     }
 
     private void notifyDistrictOfficer(ServiceRequest sr) {
-        userRepository.findDistrictOfficerByDistrict(
-            sr.getFacility() != null ? sr.getFacility().getDistrict() : null
-        ).ifPresentOrElse(
+        String district = sr.getFacility() != null ? sr.getFacility().getDistrict() : null;
+        java.util.Optional<User> officerOpt = userRepository
+            .findByRole(com.motherhood.journey.identity.enums.UserRole.DISTRICT_OFFICER)
+            .stream()
+            .filter(u -> u.getGeoLocation() != null
+                && district != null
+                && district.equals(u.getGeoLocation().getDistrict()))
+            .findFirst();
+        officerOpt.ifPresentOrElse(
             officer -> {
                 String message = String.format(
                     "[ESCALATION] Service request %s has been pending for over %dh. " +

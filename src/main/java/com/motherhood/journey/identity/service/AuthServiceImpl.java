@@ -2,7 +2,7 @@ package com.motherhood.journey.identity.service;
 
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.identity.dto.request.LoginRequest;
-import com.motherhood.journey.identity.dto.response.AuthResponse;
+import com.motherhood.journey.identity.dto.response.TokenResponse;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.repository.UserRepository;
 import com.motherhood.journey.security.JwtUtil;
@@ -30,7 +30,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthResponse login(LoginRequest request) {
+    public TokenResponse login(LoginRequest request) {
         User user = userRepository.findByPhoneNumber(request.phoneNumber())
             .orElseThrow(() -> new CustomException("Invalid credentials", HttpStatus.UNAUTHORIZED));
 
@@ -38,15 +38,21 @@ public class AuthServiceImpl implements AuthService {
             throw new CustomException("Invalid credentials", HttpStatus.UNAUTHORIZED);
         }
 
-        if (!user.getActive()) {
+        if (!user.isActive()) {
             throw new CustomException("Account is disabled", HttpStatus.FORBIDDEN);
         }
 
         user.setLastLogin(java.time.LocalDateTime.now());
 
         UUID facilityId = user.getFacility() != null ? user.getFacility().getId() : null;
-        String token = jwtUtil.generateToken(user.getPhoneNumber(), user.getRole(), facilityId);
+        String roleStr = user.getRole() != null ? user.getRole().name() : null;
+        String token = jwtUtil.generateToken(user.getPhoneNumber(), roleStr, facilityId);
 
-        return AuthResponse.of(token, user.getRole(), facilityId);
+        return new TokenResponse(token, null, roleStr);
+    }
+
+    @Override
+    public TokenResponse refresh(String refreshToken) {
+        throw new CustomException("Refresh token not supported", HttpStatus.NOT_IMPLEMENTED);
     }
 }

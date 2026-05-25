@@ -7,11 +7,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 
-@Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
@@ -26,7 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .username(user.getId().toString())
                 .password(user.getPasswordHash())
                 .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())))
-                .disabled(!Boolean.TRUE.equals(user.getActive()))
+                .disabled(!user.isActive())
                 .build();
     }
 }

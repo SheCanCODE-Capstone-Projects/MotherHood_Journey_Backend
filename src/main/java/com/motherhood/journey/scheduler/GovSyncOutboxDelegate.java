@@ -1,6 +1,7 @@
 package com.motherhood.journey.scheduler;
 
 import com.motherhood.journey.government.entity.GovSyncLog;
+import com.motherhood.journey.government.enums.SyncStatus;
 import com.motherhood.journey.government.repository.GovSyncLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +12,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -36,9 +38,10 @@ public class GovSyncOutboxDelegate {
 
     @Transactional
     public List<GovSyncLog> fetchAndMarkInProgress() {
-        List<GovSyncLog> entries = govSyncLogRepository.findPendingForRetry(
-            LocalDateTime.now(), PageRequest.of(0, 50));
-        entries.forEach(e -> e.setStatus("IN_PROGRESS"));
+        List<GovSyncLog> entries = govSyncLogRepository
+            .findByStatusAndNextRetryAtLessThanEqualAndDeadLetterFalse(
+                SyncStatus.PENDING, OffsetDateTime.now());
+        entries.forEach(e -> e.setStatus(SyncStatus.IN_FLIGHT));
         govSyncLogRepository.saveAll(entries);
         return entries;
     }
@@ -67,7 +70,7 @@ public class GovSyncOutboxDelegate {
                 .retrieve()
                 .toBodilessEntity();
 
-            entry.setStatus("SENT");
+            entry.setStatus(SyncStatus.SUCCEEDED);
             entry.setSyncedAt(LocalDateTime.now());
             entry.setErrorMessage(null);
             log.info("GovSyncOutboxDelegate: entry {} dispatched to Irembo", entry.getId());
@@ -78,12 +81,13 @@ public class GovSyncOutboxDelegate {
             entry.setErrorMessage(truncate(e.getMessage(), 500));
 
             if (retries >= MAX_RETRIES) {
-                entry.setStatus("FAILED");
+                entry.setStatus(SyncStatus.DEAD_LETTER);
+                entry.setDeadLetter(true);
                 log.error("GovSyncOutboxDelegate: entry {} FAILED after {} retries — {}",
                     entry.getId(), retries, e.getMessage(), e);
             } else {
-                entry.setStatus("PENDING");
-                entry.setNextRetryAt(LocalDateTime.now().plusMinutes((long) Math.pow(2, retries)));
+                entry.setStatus(SyncStatus.PENDING);
+                entry.setNextRetryAt(OffsetDateTime.now().plusMinutes((long) Math.pow(2, retries)));
                 log.warn("GovSyncOutboxDelegate: entry {} retry {}/{} scheduled at {}",
                     entry.getId(), retries, MAX_RETRIES, entry.getNextRetryAt());
             }

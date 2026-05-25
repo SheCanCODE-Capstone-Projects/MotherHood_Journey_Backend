@@ -6,6 +6,7 @@ import com.motherhood.journey.child.dto.request.UpdateChildRequest;
 import com.motherhood.journey.child.dto.response.ChildResponse;
 import com.motherhood.journey.child.service.ChildService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -24,29 +25,6 @@ import java.util.UUID;
 public class ChildController {
 
     private final ChildService childService;
-
-    /**
-     * POST /api/v1/children
-     * Registers a child and auto-creates their full vaccination schedule.
-     */
-    @PostMapping
-    public ResponseEntity<ApiResponse<ChildResponse>> register(
-            @Valid @RequestBody CreateChildRequest request) {
-        ChildResponse response = childService.registerChild(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(response,
-                        "Child registered with " + response.vaccinationRecordsCreated() + " vaccination records created"));
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ChildResponse>> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(childService.getChildById(id), "Child retrieved"));
-    }
-
-    @GetMapping("/mother/{motherId}")
-    public ResponseEntity<ApiResponse<List<ChildSummaryDTO>>> getByMother(@PathVariable UUID motherId) {
-        return ResponseEntity.ok(ApiResponse.success(childService.getChildrenByMother(motherId), "Children retrieved"));
-    }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")

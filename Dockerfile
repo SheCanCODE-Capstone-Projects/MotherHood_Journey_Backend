@@ -1,43 +1,57 @@
-#  Stage 1 – BUILD  (Maven + JDK 21, cached dependencies layer)
-FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
+# syntax=docker/dockerfile:1.4
 
+# ── Stage 1: Build ────────────────────────────────────────────────
+# Cache the Maven local repo between builds so dependency downloads
+# only happen when pom.xml changes, not on every source change.
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
-# Copy pom.xml first → Docker caches dependency download layer
 COPY pom.xml .
-RUN mvn dependency:go-offline -q
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -q
 
-# Copy sources and build the fat-jar (tests run in CI)
 COPY src ./src
-RUN mvn package -DskipTests -q
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn package -DskipTests -q
 
-#  Stage 2 – RUNTIME  (minimal JRE only – no Maven, no JDK)
+# ── Stage 2: Extract layered jar ──────────────────────────────────
+# Spring Boot layered jars split the fat-jar into four layers ordered
+# by change frequency. Docker only rebuilds layers that change, so
+# rebuilding after a code change only touches the thin "application" layer.
+FROM eclipse-temurin:21-jre-alpine AS extractor
+WORKDIR /app
+COPY --from=builder /build/target/motherhood-journey-*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract --destination extracted
+
+# ── Stage 3: Runtime ──────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine AS runtime
 
-# Security: run as non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
-# Copy only the fat-jar from the builder stage
-COPY --from=builder /build/target/motherhood-journey-*.jar app.jar
-
-# Ownership
-RUN chown appuser:appgroup app.jar
+# Copy layers least-to-most volatile → best layer cache reuse
+COPY --from=extractor --chown=appuser:appgroup /app/extracted/dependencies/          ./
+COPY --from=extractor --chown=appuser:appgroup /app/extracted/spring-boot-loader/    ./
+COPY --from=extractor --chown=appuser:appgroup /app/extracted/snapshot-dependencies/ ./
+COPY --from=extractor --chown=appuser:appgroup /app/extracted/application/           ./
 
 USER appuser
 
-# Expose application port
 EXPOSE 8080
 
-# ── JVM tuning: container-aware GC, fast startup ──────────────────
-ENV JAVA_OPTS="-XX:+UseContainerSupport \
-               -XX:MaxRAMPercentage=75.0 \
-               -XX:+UseG1GC \
-               -Djava.security.egd=file:/dev/./urandom"
-
-# ── Healthcheck (Docker built-in) ─────────────────────────────────
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
   CMD wget -qO- http://localhost:8080/actuator/health || exit 1
 
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Dspring.profiles.active=prod -jar app.jar"]
+# Exec-form (no shell wrapper) ensures SIGTERM reaches the JVM for graceful shutdown.
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-XX:InitialRAMPercentage=50.0", \
+  "-XX:+UseG1GC", \
+  "-XX:MaxGCPauseMillis=200", \
+  "-XX:+UseStringDeduplication", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-Dfile.encoding=UTF-8", \
+  "-Dspring.profiles.active=prod", \
+  "org.springframework.boot.loader.launch.JarLauncher"]

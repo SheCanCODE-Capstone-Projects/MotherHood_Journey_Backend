@@ -128,7 +128,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         GovSyncLog syncLog = GovSyncLog.builder()
             .facility(facility)
             .serviceRequest(saved)
-            .targetSystem("IREMBO")
+            .targetSystem(com.motherhood.journey.government.enums.TargetSystem.IREMBO)
             .syncType(request.serviceType().name())
             .idempotencyKey("SR-" + saved.getId())
             .build();

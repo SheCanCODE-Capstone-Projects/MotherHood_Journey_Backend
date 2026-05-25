@@ -2,12 +2,20 @@ package com.motherhood.journey.child.mapper;
 
 import com.motherhood.journey.child.dto.response.ChildSummaryDTO;
 import com.motherhood.journey.child.entity.Child;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import org.springframework.stereotype.Component;
 
-@Mapper(componentModel = "spring")
-public interface ChildMapper {
+@Component
+public class ChildMapper {
 
-    @Mapping(source = "mother.id", target = "motherId")
-    ChildSummaryDTO toSummary(Child child);
+    public ChildSummaryDTO toSummary(Child child) {
+        if (child == null) return null;
+        return new ChildSummaryDTO(
+            child.getId(),
+            child.getFirstName(),
+            child.getGender(),
+            child.getDateOfBirth(),
+            child.getHealthStatus(),
+            child.getMother() != null ? child.getMother().getId() : null
+        );
+    }
 }

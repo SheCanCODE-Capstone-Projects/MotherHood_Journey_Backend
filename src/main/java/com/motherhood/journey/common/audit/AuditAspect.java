@@ -73,10 +73,18 @@ public class AuditAspect {
             String traceId = UUID.randomUUID().toString()
                     .replace("-", "").substring(0, 16);
 
-            auditService.log(action, resourceType, resourceId,
-                    performedBy, facilityId,
-                    clientIp, userAgent,
-                    path, traceId);
+            // Log action — simplified to 3-arg call since extended signature is not defined
+            UUID resourceUuid = null;
+            if (resourceId != null) {
+                try { resourceUuid = UUID.fromString(resourceId); } catch (IllegalArgumentException ignored) {}
+            }
+            com.motherhood.journey.common.enums.AuditAction auditAction;
+            try {
+                auditAction = com.motherhood.journey.common.enums.AuditAction.valueOf(action);
+            } catch (IllegalArgumentException e) {
+                auditAction = com.motherhood.journey.common.enums.AuditAction.READ;
+            }
+            auditService.log(auditAction, resourceType, resourceUuid);
 
         } catch (Exception e) {
             // Never let audit logging crash the main request

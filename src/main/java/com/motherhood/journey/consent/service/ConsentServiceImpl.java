@@ -89,8 +89,9 @@ public class ConsentServiceImpl implements ConsentService {
     @Transactional(readOnly = true)
     public List<ConsentResponse> getConsentsByMother(UUID motherId, UUID facilityId) {
         // Verify the mother belongs to the requested facility before returning consents
-        motherRepository.findByIdAndFacility_Id(motherId, facilityId)
-            .orElseThrow(() -> new CustomException("Mother not found in this facility", HttpStatus.NOT_FOUND));
+        if (!motherRepository.existsByIdAndFacilityId(motherId, facilityId)) {
+            throw new CustomException("Mother not found in this facility", HttpStatus.NOT_FOUND);
+        }
         return consentRepository.findByMother_Id(motherId).stream()
             .map(ConsentResponse::from)
             .toList();

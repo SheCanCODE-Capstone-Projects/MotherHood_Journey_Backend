@@ -48,7 +48,7 @@ public class MotherService {
                 .build();
 
         mother = motherRepository.save(mother);
-        nidaVerificationService.verify(mother.getId());
+        nidaVerificationService.verify(mother.getId(), request.nationalId());
 
         return MotherResponse.from(mother);
     }

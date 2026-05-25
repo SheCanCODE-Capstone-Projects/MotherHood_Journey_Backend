@@ -144,6 +144,7 @@ public class ChildServiceImpl implements ChildService {
             .map(this::toResponse);
     }
 
+
     @Override
     @FacilityScope
     public ChildResponse updateChild(UUID id, UUID facilityId, UpdateChildRequest request) {
@@ -164,7 +165,6 @@ public class ChildServiceImpl implements ChildService {
     private ChildResponse toResponse(Child child) {
         return new ChildResponse(
             child.getId(),
-            child.getHealthId(),
             child.getMother().getId(),
             child.getFacility().getId(),
             child.getGeoLocation().getId(),
@@ -174,7 +174,9 @@ public class ChildServiceImpl implements ChildService {
             child.getDateOfBirth(),
             child.getBirthWeightKg(),
             child.getDeliveryType(),
-            child.getHealthStatus()
+            child.getHealthStatus(),
+            0,
+            child.getRegisteredAt()
         );
     }
 }

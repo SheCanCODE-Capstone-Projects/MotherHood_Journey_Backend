@@ -189,15 +189,18 @@ public class HealthVisitServiceImpl implements HealthVisitService {
 
     private List<Diagnosis> persistDiagnoses(HealthVisit visit, List<DiagnosisRequest> diagReqs) {
         if (diagReqs == null || diagReqs.isEmpty()) return List.of();
-        return diagnosisRepository.saveAll(diagReqs.stream()
+        List<Diagnosis> entities = diagReqs.stream()
             .map(d -> Diagnosis.builder()
                 .visit(visit)
                 .icd10Code(d.icd10Code())
                 .description(d.description())
-                .severity(d.severity())
+                .severity(d.severity() != null
+                    ? com.motherhood.journey.maternal.enums.DiagnosisSeverity.valueOf(d.severity())
+                    : null)
                 .isPrimary(d.isPrimary())
                 .build())
-            .toList());
+            .toList();
+        return diagnosisRepository.saveAll(entities);
     }
 
     private List<Prescription> persistPrescriptions(HealthVisit visit, List<PrescriptionRequest> rxReqs) {

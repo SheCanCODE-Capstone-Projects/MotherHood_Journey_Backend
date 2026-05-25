@@ -2,6 +2,8 @@ package com.motherhood.journey.scheduler;
 
 import com.motherhood.journey.appointment.service.AppointmentService;
 import com.motherhood.journey.child.service.VaccinationService;
+import com.motherhood.journey.notification.entity.SmsNotification;
+import com.motherhood.journey.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,11 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class ReminderScheduler {
+
+    private static final int MAX_RETRIES = 3;
 
     private final VaccinationService vaccinationService;
     private final AppointmentService appointmentService;
+    private final NotificationRepository notificationRepository;
 
     // 01:00 Rwanda time — flip overdue vaccinations and enqueue SMS
     @Scheduled(cron = "0 0 1 * * *", zone = "Africa/Kigali")
@@ -29,15 +36,6 @@ public class ReminderScheduler {
     public void sendAppointmentReminders() {
         log.info("Starting daily appointment reminder scan...");
         appointmentService.sendUpcomingReminders();
-    }
-}
-    private static final Logger log = LoggerFactory.getLogger(ReminderScheduler.class);
-    private static final int MAX_RETRIES = 3;
-
-    private final NotificationRepository notificationRepository;
-
-    public ReminderScheduler(NotificationRepository notificationRepository) {
-        this.notificationRepository = notificationRepository;
     }
 
     /**

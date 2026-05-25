@@ -2,6 +2,10 @@ package com.motherhood.journey.notification.service;
 
 import com.motherhood.journey.child.entity.VaccinationRecord;
 import com.motherhood.journey.identity.entity.User;
+import com.motherhood.journey.identity.enums.UserRole;
+import com.motherhood.journey.identity.repository.UserRepository;
+import com.motherhood.journey.notification.dto.request.SendNotificationRequest;
+import com.motherhood.journey.notification.dto.response.NotificationResponse;
 import com.motherhood.journey.notification.entity.SmsNotification;
 import com.motherhood.journey.notification.enums.NotificationStatus;
 import com.motherhood.journey.notification.enums.NotificationType;
@@ -112,7 +116,9 @@ public class NotificationServiceImpl implements NotificationService {
     public void sendAdminAlert(String message) {
 
         List<User> admins = userRepository
-                .findByRoleAndActiveTrue(UserRole.MOH_ADMIN.name());
+                .findByRole(UserRole.MOH_ADMIN).stream()
+                .filter(User::isActive)
+                .toList();
 
         if (admins.isEmpty()) {
             log.warn("No active MOH_ADMIN users found. Alert: {}",
@@ -162,6 +168,21 @@ public class NotificationServiceImpl implements NotificationService {
                 .retryCount(notification.getRetryCount())
                 .createdAt(notification.getCreatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void enqueue(VaccinationRecord record) {
+        if (record.getChild() == null || record.getChild().getMother() == null
+                || record.getChild().getMother().getUser() == null) {
+            log.warn("Cannot enqueue vaccination notification — missing user for record {}",
+                    record.getId());
+            return;
+        }
+        User recipient = record.getChild().getMother().getUser();
+        String message = "Vaccination overdue: " + record.getSchedule().getVaccineName()
+                + " was due on " + record.getDueDate();
+        enqueueRaw(recipient, message, NotificationType.VACCINATION_REMINDER);
     }
 
     @Override

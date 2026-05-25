@@ -33,7 +33,7 @@ public class NidaVerificationService {
             NidaVerifiedStatus status = result.status();
 
             motherRepository.findById(motherId).ifPresent(mother -> {
-                mother.setNidaVerifiedStatus(status.name());
+                mother.setNidaVerifiedStatus(status);
                 motherRepository.save(mother);
                 log.info("NIDA verification complete — motherId={} status={}", motherId, status);
             });
@@ -41,7 +41,7 @@ public class NidaVerificationService {
         } catch (Exception e) {
             log.error("NIDA verification error — motherId={} error={}", motherId, e.getMessage());
             motherRepository.findById(motherId).ifPresent(mother -> {
-                mother.setNidaVerifiedStatus(NidaVerifiedStatus.FAILED.name());
+                mother.setNidaVerifiedStatus(NidaVerifiedStatus.FAILED);
                 motherRepository.save(mother);
             });
         }

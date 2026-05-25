@@ -22,7 +22,7 @@ public record MeProfileResponse(
             user.getPhoneNumber(),
             user.getFirstName(),
             user.getLastName(),
-            user.getRole(),
+            user.getRole() != null ? user.getRole().name() : null,
             user.getPreferredLanguage(),
             user.getFacility() != null ? user.getFacility().getId() : null,
             user.getGeoLocation() != null ? user.getGeoLocation().getId() : null,

@@ -14,4 +14,5 @@ public interface AppointmentService {
     List<AppointmentResponse> getAppointmentsByPatient(UUID patientRefId, String patientType, UUID facilityId);
     AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request);
     void cancelAppointment(UUID id, UUID facilityId);
+    void sendUpcomingReminders();
 }

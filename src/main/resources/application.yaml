@@ -7,13 +7,17 @@ app:
 
 server:
   port: ${APP_PORT:8080}
+  shutdown: graceful
   error:
     include-stacktrace: never
     include-message: never
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/motherhoodJourney_db
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:Motherhood Journey DB}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -59,6 +63,7 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
 
 # Africa's Talking SMS
 africas-talking:
@@ -67,8 +72,15 @@ africas-talking:
 
 # Irembo Government Integration
 irembo:
-  base-url: ${IREMBO_BASE_URL:}
-  api-key: ${IREMBO_API_KEY:}
+  api:
+    base-url: ${IREMBO_BASE_URL:}
+    key: ${IREMBO_API_KEY:}
+
+# HMIS API
+hmis:
+  api:
+    base-url: ${HMIS_BASE_URL:}
+    key: ${HMIS_API_KEY:}
 
 # NIDA API
 nida:

@@ -64,7 +64,7 @@ public class UserServiceImpl implements UserService {
             .passwordHash(passwordEncoder.encode(request.password()))
             .firstName(request.firstName())
             .lastName(request.lastName())
-            .role(request.role().name())
+            .role(com.motherhood.journey.identity.enums.UserRole.valueOf(request.role().name()))
             .geoLocation(geoLocation)
             .facility(facility)
             .build();

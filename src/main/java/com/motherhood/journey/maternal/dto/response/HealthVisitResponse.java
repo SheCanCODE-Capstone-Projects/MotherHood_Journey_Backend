@@ -36,7 +36,9 @@ public record HealthVisitResponse(
     ) {
         public static DiagnosisResponse from(Diagnosis d) {
             return new DiagnosisResponse(d.getId(), d.getIcd10Code(),
-                d.getDescription(), d.getSeverity(), d.getIsPrimary());
+                d.getDescription(),
+                d.getSeverity() != null ? d.getSeverity().name() : null,
+                d.getIsPrimary());
         }
     }
 

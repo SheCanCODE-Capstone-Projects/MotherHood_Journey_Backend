@@ -16,14 +16,14 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class NidaApiClient {
+public class GovNidaApiClient {
 
     private final RestTemplate restTemplate;
 
-    @Value("${nida.api.base-url}")
+    @Value("${nida.base-url:}")
     private String nidaBaseUrl;
 
-    @Value("${nida.api.key}")
+    @Value("${nida.api-key:}")
     private String nidaApiKey;
 
     /**

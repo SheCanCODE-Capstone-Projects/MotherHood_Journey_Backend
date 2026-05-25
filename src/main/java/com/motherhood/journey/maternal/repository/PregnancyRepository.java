@@ -2,6 +2,8 @@ package com.motherhood.journey.maternal.repository;
 
 import com.motherhood.journey.maternal.entity.Pregnancy;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -11,13 +13,25 @@ import java.util.UUID;
 @Repository
 public interface PregnancyRepository extends JpaRepository<Pregnancy, UUID> {
 
-    List<Pregnancy> findByMother_Id(UUID motherId);
+    List<Pregnancy> findByMotherId(UUID motherId);
 
-    List<Pregnancy> findByMother_IdAndMother_Facility_Id(UUID motherId, UUID facilityId);
+    @Query(value = """
+            SELECT p.* FROM pregnancies p
+            JOIN mothers m ON p.mother_id = m.id
+            WHERE p.mother_id = :motherId AND m.facility_id = :facilityId
+            """, nativeQuery = true)
+    List<Pregnancy> findByMotherIdAndFacilityId(@Param("motherId") UUID motherId,
+                                                @Param("facilityId") UUID facilityId);
 
-    Optional<Pregnancy> findByIdAndMother_Facility_Id(UUID id, UUID facilityId);
+    @Query(value = """
+            SELECT p.* FROM pregnancies p
+            JOIN mothers m ON p.mother_id = m.id
+            WHERE p.id = :id AND m.facility_id = :facilityId
+            """, nativeQuery = true)
+    Optional<Pregnancy> findByIdAndFacilityId(@Param("id") UUID id,
+                                              @Param("facilityId") UUID facilityId);
 
-    Optional<Pregnancy> findFirstByMother_IdAndStatusOrderByCreatedAtDesc(UUID motherId, String status);
+    Optional<Pregnancy> findFirstByMotherIdAndStatusOrderByCreatedAtDesc(UUID motherId, String status);
 
     long countByStatus(String status);
 }

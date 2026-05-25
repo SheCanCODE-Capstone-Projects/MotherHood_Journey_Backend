@@ -115,8 +115,11 @@ public class GeoServiceImpl implements GeoService {
                 geo.getSector(),
                 geo.getCell(),
                 geo.getVillage(),
+                geo.getPostalCode(),
                 geo.getLatitude(),
-                geo.getLongitude()
+                geo.getLongitude(),
+                geo.getActive(),
+                geo.getCreatedAt()
         );
     }
 

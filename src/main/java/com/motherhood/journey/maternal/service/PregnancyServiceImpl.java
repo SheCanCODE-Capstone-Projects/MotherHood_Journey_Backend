@@ -74,12 +74,12 @@ public class PregnancyServiceImpl implements PregnancyService {
         }
 
         Pregnancy pregnancy = Pregnancy.builder()
-            .mother(mother)
+            .motherId(mother.getId())
             .lmpDate(request.lmpDate())
             .edd(request.edd())
             .gravida(request.gravida())
             .para(request.para())
-            .assignedChw(chw)
+            .assignedChwId(chw != null ? chw.getId() : null)
             .build();
 
         Pregnancy saved = pregnancyRepository.save(pregnancy);
@@ -98,7 +98,7 @@ public class PregnancyServiceImpl implements PregnancyService {
     @FacilityScope
     @Transactional(readOnly = true)
     public List<PregnancyResponse> getPregnanciesByMother(UUID motherId, UUID facilityId) {
-        return pregnancyRepository.findByMother_IdAndMother_Facility_Id(motherId, facilityId)
+        return pregnancyRepository.findByMotherIdAndFacilityId(motherId, facilityId)
             .stream().map(PregnancyResponse::from).toList();
     }
 
@@ -115,14 +115,14 @@ public class PregnancyServiceImpl implements PregnancyService {
         if (request.assignedChwId() != null) {
             User chw = userRepository.findById(request.assignedChwId())
                 .orElseThrow(() -> new CustomException("CHW not found", HttpStatus.NOT_FOUND));
-            pregnancy.setAssignedChw(chw);
+            pregnancy.setAssignedChwId(chw.getId());
         }
         auditService.log(AuditAction.UPDATE, "PREGNANCY", id);
         return PregnancyResponse.from(pregnancy);
     }
 
     private Pregnancy findByIdAndFacility(UUID id, UUID facilityId) {
-        return pregnancyRepository.findByIdAndMother_Facility_Id(id, facilityId)
+        return pregnancyRepository.findByIdAndFacilityId(id, facilityId)
             .orElseThrow(() -> new CustomException("Pregnancy not found", HttpStatus.NOT_FOUND));
     }
 }

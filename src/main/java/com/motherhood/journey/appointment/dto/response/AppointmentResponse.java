@@ -28,8 +28,8 @@ public record AppointmentResponse(
                 a.getFacility().getName(),
                 a.getHealthWorker() != null ? a.getHealthWorker().getId() : null,
                 a.getScheduledAt(),
-                a.getAppointmentType(),
-                a.getStatus(),
+                a.getAppointmentType() != null ? a.getAppointmentType().name() : null,
+                a.getStatus() != null ? a.getStatus().name() : null,
                 a.getReminderSent(),
                 a.getNotes(),
                 a.getCreatedAt()

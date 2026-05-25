@@ -7,6 +7,7 @@ import com.motherhood.journey.appointment.service.AppointmentService;
 import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.maternal.enums.PatientType;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,27 +30,32 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> create(
             @RequestBody CreateAppointmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(appointmentService.create(request));
+                .body(appointmentService.createAppointment(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','MOH_ADMIN')")
     public ResponseEntity<AppointmentResponse> update(
             @PathVariable UUID id,
+            @RequestParam UUID facilityId,
             @RequestBody UpdateAppointmentRequest request) {
-        return ResponseEntity.ok(appointmentService.update(id, request));
+        return ResponseEntity.ok(appointmentService.updateAppointment(id, facilityId, request));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','DISTRICT_OFFICER','MOH_ADMIN')")
-    public ResponseEntity<AppointmentResponse> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(appointmentService.getById(id));
+    public ResponseEntity<AppointmentResponse> getById(
+            @PathVariable UUID id,
+            @RequestParam UUID facilityId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentById(id, facilityId));
     }
 
     @GetMapping("/patient/{patientRefId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','DISTRICT_OFFICER','MOH_ADMIN')")
     public ResponseEntity<List<AppointmentResponse>> getByPatient(
-            @PathVariable UUID patientRefId) {
-        return ResponseEntity.ok(appointmentService.getByPatient(patientRefId));
+            @PathVariable UUID patientRefId,
+            @RequestParam String patientType,
+            @RequestParam UUID facilityId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentsByPatient(patientRefId, patientType, facilityId));
     }
 }

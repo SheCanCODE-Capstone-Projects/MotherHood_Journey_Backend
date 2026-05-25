@@ -62,22 +62,4 @@ public class AuditLog {
     private LocalDateTime createdAt = LocalDateTime.now();
 
 
-    public static AuditLog success(UUID userId, String action,
-                                   String resourceType, UUID resourceId,
-                                   String ipAddress) {
-        return AuditLog.builder()
-                .userId(userId).action(action)
-                .resourceType(resourceType).resourceId(resourceId)
-                .ipAddress(ipAddress).success(true).build();
-    }
-
-    public static AuditLog failure(UUID userId, String action,
-                                   String resourceType, String failReason,
-                                   String ipAddress, String userAgent) {
-        return AuditLog.builder()
-                .userId(userId).action(action)
-                .resourceType(resourceType)
-                .ipAddress(ipAddress).userAgent(userAgent)
-                .success(false).failReason(failReason).build();
-    }
 }

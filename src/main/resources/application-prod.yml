@@ -1,12 +1,16 @@
 spring:
+  main:
+    banner-mode: off
+
   datasource:
     hikari:
-      maximum-pool-size: 3
-      minimum-idle: 1
+      maximum-pool-size: 10
+      minimum-idle: 2
       connection-timeout: 20000
       idle-timeout: 300000
       max-lifetime: 600000
       leak-detection-threshold: 60000
+      connection-test-query: SELECT 1
 
   flyway:
     baseline-on-migrate: true
@@ -16,15 +20,23 @@ spring:
   jpa:
     show-sql: false
 
+server:
+  tomcat:
+    threads:
+      max: 50
+      min-spare: 5
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: when-authorized
       show-components: when-authorized
+      probes:
+        enabled: true
   info:
     env:
       enabled: true

@@ -4,6 +4,7 @@ import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.identity.dto.request.LoginRequest;
 import com.motherhood.journey.identity.dto.request.RegisterRequest;
 import com.motherhood.journey.identity.dto.response.AuthResponse;
+import com.motherhood.journey.identity.dto.response.TokenResponse;
 import com.motherhood.journey.identity.dto.response.UserResponse;
 import com.motherhood.journey.identity.service.AuthService;
 import com.motherhood.journey.identity.service.UserService;
@@ -25,7 +26,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(ApiResponse.success(authService.login(request), "Login successful"));
     }
 

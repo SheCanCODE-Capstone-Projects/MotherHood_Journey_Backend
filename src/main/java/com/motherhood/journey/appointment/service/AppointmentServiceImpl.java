@@ -4,7 +4,11 @@ import com.motherhood.journey.appointment.dto.request.CreateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.request.UpdateAppointmentRequest;
 import com.motherhood.journey.appointment.dto.response.AppointmentResponse;
 import com.motherhood.journey.appointment.entity.Appointment;
+import com.motherhood.journey.appointment.enums.AppointmentStatus;
+import com.motherhood.journey.appointment.enums.AppointmentType;
 import com.motherhood.journey.appointment.repository.AppointmentRepository;
+import com.motherhood.journey.child.entity.Child;
+import com.motherhood.journey.child.repository.ChildRepository;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
@@ -12,8 +16,13 @@ import com.motherhood.journey.facility.repository.FacilityRepository;
 import com.motherhood.journey.geo.repository.GeoRepository;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.repository.UserRepository;
+import com.motherhood.journey.maternal.entity.Mother;
+import com.motherhood.journey.maternal.repository.MotherRepository;
+import com.motherhood.journey.notification.enums.NotificationType;
+import com.motherhood.journey.notification.service.NotificationService;
 import com.motherhood.journey.security.FacilityAuthDetails;
 import com.motherhood.journey.security.FacilityScope;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -21,13 +30,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -41,15 +47,24 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final FacilityRepository facilityRepository;
     private final GeoRepository geoRepository;
     private final UserRepository userRepository;
+    private final MotherRepository motherRepository;
+    private final ChildRepository childRepository;
+    private final NotificationService notificationService;
 
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
                                   FacilityRepository facilityRepository,
                                   GeoRepository geoRepository,
-                                  UserRepository userRepository) {
+                                  UserRepository userRepository,
+                                  MotherRepository motherRepository,
+                                  ChildRepository childRepository,
+                                  NotificationService notificationService) {
         this.appointmentRepository = appointmentRepository;
         this.facilityRepository = facilityRepository;
         this.geoRepository = geoRepository;
         this.userRepository = userRepository;
+        this.motherRepository = motherRepository;
+        this.childRepository = childRepository;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -89,7 +104,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             .healthWorker(healthWorker)
             .geoLocation(geoLocation)
             .scheduledAt(request.scheduledAt())
-            .appointmentType(request.appointmentType())
+            .appointmentType(AppointmentType.valueOf(request.appointmentType()))
             .notes(request.notes())
             .build();
 
@@ -125,9 +140,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     @FacilityScope
     public AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request) {
         Appointment appointment = findByIdAndFacility(id, facilityId);
-        if (request.scheduledAt() != null)    appointment.setScheduledAt(request.scheduledAt());
-        if (request.appointmentType() != null) appointment.setAppointmentType(request.appointmentType());
-        if (request.status() != null)         appointment.setStatus(request.status());
+        if (request.scheduledAt() != null)     appointment.setScheduledAt(request.scheduledAt());
+        if (request.appointmentType() != null) appointment.setAppointmentType(AppointmentType.valueOf(request.appointmentType()));
+        if (request.status() != null)          appointment.setStatus(AppointmentStatus.valueOf(request.status()));
         if (request.notes() != null)          appointment.setNotes(request.notes());
         if (request.healthWorkerId() != null) {
             User hw = userRepository.findById(request.healthWorkerId())
@@ -140,7 +155,52 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @FacilityScope
     public void cancelAppointment(UUID id, UUID facilityId) {
-        findByIdAndFacility(id, facilityId).setStatus("CANCELLED");
+        findByIdAndFacility(id, facilityId).setStatus(AppointmentStatus.CANCELLED);
+    }
+
+    @Override
+    public void sendUpcomingReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime window = now.plusHours(24);
+        List<Appointment> upcoming = appointmentRepository.findUpcomingWithoutReminder(now, window);
+
+        if (upcoming.isEmpty()) {
+            log.debug("No upcoming appointments require reminders.");
+            return;
+        }
+
+        log.info("Sending reminders for {} upcoming appointment(s)", upcoming.size());
+
+        for (Appointment appointment : upcoming) {
+            try {
+                Optional<User> recipientOpt = resolvePatientUser(appointment);
+                if (recipientOpt.isEmpty()) {
+                    log.warn("Could not resolve patient user for appointment {}, skipping reminder", appointment.getId());
+                    continue;
+                }
+                String message = "Reminder: You have a " + appointment.getAppointmentType().name().toLowerCase()
+                        + " appointment scheduled at " + appointment.getScheduledAt()
+                        + " at " + appointment.getFacility().getName() + ".";
+                notificationService.enqueueRaw(recipientOpt.get(), message, NotificationType.APPOINTMENT);
+                appointment.setReminderSent(true);
+                log.debug("Reminder enqueued for appointment {}", appointment.getId());
+            } catch (Exception e) {
+                log.error("Failed to enqueue reminder for appointment {}: {}", appointment.getId(), e.getMessage(), e);
+            }
+        }
+    }
+
+    private Optional<User> resolvePatientUser(Appointment appointment) {
+        UUID patientRefId = appointment.getPatientRefId();
+        String patientType = appointment.getPatientType();
+
+        if ("MOTHER".equalsIgnoreCase(patientType)) {
+            return motherRepository.findById(patientRefId).map(Mother::getUser);
+        } else if ("CHILD".equalsIgnoreCase(patientType)) {
+            return childRepository.findById(patientRefId)
+                    .map(child -> child.getMother().getUser());
+        }
+        return Optional.empty();
     }
 
     private Appointment findByIdAndFacility(UUID id, UUID facilityId) {
