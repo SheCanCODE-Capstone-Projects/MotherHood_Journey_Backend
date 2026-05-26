@@ -20,6 +20,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/service-requests")
 @Validated
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Service Requests",
+    description = "Government service request workflow: submit, review, approve, reject. Consent-gated and audited.")
 public class ServiceRequestController {
 
     private final ServiceRequestService serviceRequestService;

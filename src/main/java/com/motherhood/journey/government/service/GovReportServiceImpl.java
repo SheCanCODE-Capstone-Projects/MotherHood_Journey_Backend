@@ -26,13 +26,16 @@ public class GovReportServiceImpl implements GovReportService {
     private final GovReportRepository govReportRepository;
     private final UserRepository userRepository;
     private final GeoRepository geoRepository;
+    private final GovReportAggregator aggregator;
 
     public GovReportServiceImpl(GovReportRepository govReportRepository,
                                 UserRepository userRepository,
-                                GeoRepository geoRepository) {
+                                GeoRepository geoRepository,
+                                GovReportAggregator aggregator) {
         this.govReportRepository = govReportRepository;
         this.userRepository = userRepository;
         this.geoRepository = geoRepository;
+        this.aggregator = aggregator;
     }
 
     @Override
@@ -44,13 +47,16 @@ public class GovReportServiceImpl implements GovReportService {
         GeoLocation geoLocation = geoRepository.findById(request.geoLocationId())
             .orElseThrow(() -> new CustomException("GeoLocation not found", HttpStatus.NOT_FOUND));
 
+        // Server-side computed; client-supplied aggregates are ignored.
+        var aggregates = aggregator.compute(request.reportType(), request.period(), request.geoLocationId());
+
         GovReport report = GovReport.builder()
             .generatedBy(generator)
             .geoLocation(geoLocation)
             .reportType(request.reportType().name())
             .period(request.period())
             .scopeLevel(request.scopeLevel().name())
-            .aggregates(request.aggregates())
+            .aggregates(aggregates)
             .build();
 
         return GovReportResponse.from(govReportRepository.save(report));

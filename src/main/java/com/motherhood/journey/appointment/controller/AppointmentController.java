@@ -21,6 +21,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/appointments")
 @RequiredArgsConstructor
 @Validated
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Appointments",
+    description = "Scheduling, capacity-checked slots, reminders, status lifecycle")
 public class AppointmentController {
 
     private final AppointmentService appointmentService;

@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/webhooks/at")
 @RequiredArgsConstructor
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Webhooks (Africa's Talking)",
+    description = "HMAC-validated delivery callbacks from Africa's Talking. Public, signature-checked.")
 @Slf4j
 public class SmsNotificationController {
 

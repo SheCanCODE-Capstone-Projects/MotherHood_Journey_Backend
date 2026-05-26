@@ -22,6 +22,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/children")
 @RequiredArgsConstructor
 @Validated
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Children",
+    description = "Child registration, auto-generated immunisation schedule, growth tracking")
 public class ChildController {
 
     private final ChildService childService;

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Notifications",
+    description = "Inbound SMS queueing and history (admin-only)")
 public class NotificationController {
     private final NotificationService notificationService;
 

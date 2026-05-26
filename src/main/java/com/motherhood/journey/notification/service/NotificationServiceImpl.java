@@ -28,6 +28,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final AfricasTalkingClient africasTalkingClient;
+    private final SmsTemplateService smsTemplateService;
 
     // Queues a new SMS notification to be sent
     @Override
@@ -180,8 +181,11 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
         User recipient = record.getChild().getMother().getUser();
-        String message = "Vaccination overdue: " + record.getSchedule().getVaccineName()
-                + " was due on " + record.getDueDate();
+        String message = smsTemplateService.render(
+                "sms.vaccination.overdue",
+                recipient.getPreferredLanguage(),
+                record.getSchedule().getVaccineName(),
+                record.getDueDate());
         enqueueRaw(recipient, message, NotificationType.VACCINATION_REMINDER);
     }
 

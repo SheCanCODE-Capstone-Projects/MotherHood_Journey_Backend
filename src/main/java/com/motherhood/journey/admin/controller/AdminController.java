@@ -16,6 +16,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin")
 @PreAuthorize("hasRole('MOH_ADMIN')")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Admin",
+    description = "Platform-wide dashboard counters and user activation/deactivation")
 public class AdminController {
 
     private final AdminService adminService;

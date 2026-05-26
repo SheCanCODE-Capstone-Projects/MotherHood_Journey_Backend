@@ -21,6 +21,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/health-visits")
 @Validated
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Health Visits",
+    description = "ANC, PNC, IMMUNIZATION, SICK_CHILD, GROWTH_MONITORING visits with vitals, diagnoses, prescriptions")
 public class HealthVisitController {
 
     private final HealthVisitService healthVisitService;

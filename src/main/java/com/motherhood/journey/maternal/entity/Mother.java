@@ -7,6 +7,8 @@ import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.maternal.enums.NidaVerifiedStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
@@ -20,6 +22,8 @@ import java.util.UUID;
         @Index(name = "idx_mother_geo", columnList = "geo_location_id"),
         @Index(name = "idx_mother_nida_status", columnList = "nida_verified_status")
 })
+@SQLDelete(sql = "UPDATE mothers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -61,4 +65,12 @@ public class Mother {
     @Column(name = "registered_at", updatable = false)
     @Builder.Default
     private LocalDateTime registeredAt = LocalDateTime.now();
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private long version = 0L;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

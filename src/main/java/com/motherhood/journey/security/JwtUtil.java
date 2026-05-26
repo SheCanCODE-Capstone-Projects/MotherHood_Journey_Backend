@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import javax.crypto.SecretKey;
@@ -68,6 +69,13 @@ public class JwtUtil {
 
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<UUID> extractGeoScopeIds(String token) {
+        Object raw = extractClaim(token, claims -> claims.get(JwtClaims.GEO_SCOPE_IDS));
+        if (raw == null) return List.of();
+        return ((List<String>) raw).stream().map(UUID::fromString).toList();
     }
 
     public boolean isTokenValid(String token) {

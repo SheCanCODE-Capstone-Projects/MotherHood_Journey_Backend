@@ -13,6 +13,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/geo")
 @RequiredArgsConstructor
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Geo",
+    description = "Rwanda 5-level administrative hierarchy (Province → Village)")
 public class GeoController {
 
     private final GeoService service;

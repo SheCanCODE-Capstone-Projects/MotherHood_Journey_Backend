@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/me")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Me",
+    description = "Self-service profile, settings, and consent for the authenticated user")
 public class MeController {
 
     private final MeService meService;

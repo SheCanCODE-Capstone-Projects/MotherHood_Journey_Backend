@@ -54,7 +54,7 @@ public class AdminServiceImpl implements AdminService {
             motherRepository.count(),
             childRepository.count(),
             userRepository.count(),
-            appointmentRepository.countByStatus("SCHEDULED"),
+            appointmentRepository.countByStatus(com.motherhood.journey.appointment.enums.AppointmentStatus.SCHEDULED),
             vaccinationRecordRepository.countByStatus("PENDING"),
             pregnancyRepository.countByStatus("ACTIVE")
         );

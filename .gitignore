@@ -12,3 +12,6 @@ target/
 .idea/
 *.iml
 .DS_Store
+
+# Local file storage
+uploads/

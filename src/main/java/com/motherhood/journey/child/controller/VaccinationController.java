@@ -14,6 +14,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/vaccinations")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Vaccinations",
+    description = "Mark vaccines administered, age-validated, audit-trailed")
 public class VaccinationController {
 
     private final VaccinationService vaccinationService;

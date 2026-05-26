@@ -1,5 +1,6 @@
 package com.motherhood.journey.scheduler;
 
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,10 +21,10 @@ public class GovSyncOutboxProcessor {
 
     private final GovSyncOutboxDelegate delegate;
 
-    @Value("${irembo.base-url:}")
+    @Value("${irembo.api.base-url:}")
     private String iremboBaseUrl;
 
-    @Value("${irembo.api-key:}")
+    @Value("${irembo.api.key:}")
     private String iremboApiKey;
 
     public GovSyncOutboxProcessor(GovSyncOutboxDelegate delegate) {
@@ -31,6 +32,7 @@ public class GovSyncOutboxProcessor {
     }
 
     @Scheduled(fixedDelay = 30_000)
+    @SchedulerLock(name = "govSyncOutboxProcess", lockAtLeastFor = "PT10S", lockAtMostFor = "PT5M")
     public void process() {
         if (iremboBaseUrl == null || iremboBaseUrl.isBlank()) {
             log.debug("GovSyncOutboxProcessor: IREMBO_BASE_URL not configured — skipping");

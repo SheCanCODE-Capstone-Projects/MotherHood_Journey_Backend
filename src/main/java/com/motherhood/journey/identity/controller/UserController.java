@@ -13,6 +13,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Users",
+    description = "User profile lookup and update (admin-managed)")
 public class UserController {
 
     private final UserService userService;

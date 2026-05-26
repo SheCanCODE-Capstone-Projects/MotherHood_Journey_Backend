@@ -3,8 +3,10 @@ package com.motherhood.journey.facility.controller;
 import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.facility.dto.request.CreateFacilityRequest;
 import com.motherhood.journey.facility.dto.request.UpdateFacilityRequest;
+import com.motherhood.journey.facility.dto.response.FacilityAnalyticsResponse;
 import com.motherhood.journey.facility.dto.response.FacilityResponse;
 import com.motherhood.journey.facility.entity.FacilityType;
+import com.motherhood.journey.facility.service.FacilityAnalyticsService;
 import com.motherhood.journey.facility.service.FacilityService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
@@ -22,12 +24,24 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/facilities")
 @Validated
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Facilities",
+    description = "Health facility CRUD, public listing for registration pickers, per-facility analytics")
 public class FacilityController {
 
     private final FacilityService facilityService;
+    private final FacilityAnalyticsService analyticsService;
 
-    public FacilityController(FacilityService facilityService) {
+    public FacilityController(FacilityService facilityService,
+                              FacilityAnalyticsService analyticsService) {
         this.facilityService = facilityService;
+        this.analyticsService = analyticsService;
+    }
+
+    @GetMapping("/{id}/analytics")
+    @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    public ResponseEntity<ApiResponse<FacilityAnalyticsResponse>> getAnalytics(@PathVariable UUID id) {
+        return ResponseEntity.ok(
+            ApiResponse.success(analyticsService.computeFor(id), "Analytics computed"));
     }
 
     @PostMapping

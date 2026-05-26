@@ -2,7 +2,6 @@ package com.motherhood.journey.government.dto.request;
 
 import com.motherhood.journey.government.enums.ReportType;
 import com.motherhood.journey.government.enums.ScopeLevel;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -14,5 +13,5 @@ public record GovReportRequest(
     @NotNull @Size(max = 16) String period,
     @NotNull ScopeLevel scopeLevel,
     @NotNull UUID geoLocationId,
-    @NotNull Map<String, Object> aggregates
+    Map<String, Object> aggregates
 ) {}

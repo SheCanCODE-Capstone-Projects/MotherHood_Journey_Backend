@@ -1,5 +1,6 @@
 package com.motherhood.journey.maternal.service;
 
+import com.motherhood.journey.common.audit.AuditedResource;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
@@ -28,6 +29,7 @@ public class MotherService {
     private final EntityManager entityManager;
 
     @Transactional
+    @AuditedResource(action = "CREATE", resourceType = "MOTHER")
     public MotherResponse registerMother(CreatedMotherRequest request) {
         if (motherRepository.existsByUserId(request.userId())) {
             throw new IllegalStateException("Mother already registered for this user");
@@ -61,6 +63,7 @@ public class MotherService {
     }
 
     @Transactional(readOnly = true)
+    @AuditedResource(action = "READ", resourceType = "MOTHER")
     public MotherResponse getMotherById(UUID id, User caller) {
         Mother mother = motherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mother not found: " + id));

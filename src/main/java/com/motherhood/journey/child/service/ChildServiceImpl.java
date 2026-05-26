@@ -83,6 +83,13 @@ public class ChildServiceImpl implements ChildService {
         Mother mother = motherRepository.findById(request.motherId())
             .orElseThrow(() -> new MotherNotFoundException(request.motherId()));
 
+        if (childRepository.existsByMother_IdAndFirstNameIgnoreCaseAndDateOfBirth(
+                request.motherId(), request.firstName(), request.dateOfBirth())) {
+            throw new CustomException(
+                "Child with same name and date of birth already exists for this mother",
+                HttpStatus.CONFLICT);
+        }
+
         Facility facility = facilityRepository.findById(request.facilityId())
             .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
 

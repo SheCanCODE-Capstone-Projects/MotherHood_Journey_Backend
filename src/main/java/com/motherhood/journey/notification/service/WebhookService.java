@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.Optional;
 
@@ -31,9 +32,10 @@ public class WebhookService {
 
     public boolean isValidSignature(String requestBody,
                                     String receivedSignature) {
+        if (receivedSignature == null) {
+            return false;
+        }
         try {
-            // Create HMAC-SHA256 with API key as the secret
-
             Mac mac = Mac.getInstance("HmacSHA256");
             SecretKeySpec secretKey = new SecretKeySpec(
                     apiKey.getBytes(StandardCharsets.UTF_8),
@@ -41,16 +43,15 @@ public class WebhookService {
             );
             mac.init(secretKey);
 
-            // Calculate signature from request body
             byte[] hash = mac.doFinal(
                     requestBody.getBytes(StandardCharsets.UTF_8));
 
-            // Encode to Base64 for comparison
             String calculatedSignature = Base64.getEncoder()
                     .encodeToString(hash);
 
-            // Compare our calculated signature with what AT sent
-            return calculatedSignature.equals(receivedSignature);
+            return MessageDigest.isEqual(
+                    calculatedSignature.getBytes(StandardCharsets.UTF_8),
+                    receivedSignature.getBytes(StandardCharsets.UTF_8));
 
         } catch (Exception e) {
             log.error("Failed to validate HMAC signature: {}",

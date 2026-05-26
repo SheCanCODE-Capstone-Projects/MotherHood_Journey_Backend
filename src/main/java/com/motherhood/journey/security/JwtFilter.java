@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -46,8 +47,13 @@ public class JwtFilter extends OncePerRequestFilter {
             if (token != null && jwtUtil.isTokenValid(token)) {
                 String phoneNumber = jwtUtil.extractPhoneNumber(token);
                 UUID facilityId = jwtUtil.extractFacilityId(token);
+                List<UUID> geoScopeIds = jwtUtil.extractGeoScopeIds(token);
 
                 UserDetails userDetails = loadCached(phoneNumber);
+
+                if (userDetails instanceof com.motherhood.journey.identity.entity.User appUser) {
+                    appUser.setScopedGeoIds(geoScopeIds);
+                }
 
                 UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());

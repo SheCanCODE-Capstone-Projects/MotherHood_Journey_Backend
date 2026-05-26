@@ -74,6 +74,16 @@ public class User implements UserDetails {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    @Column(name = "last_login_ip", length = 45)
+    private String lastLoginIp;
+
+    @Column(name = "failed_login_attempts", nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
     @Transient
     private List<UUID> scopedGeoIds;
 
@@ -86,7 +96,9 @@ public class User implements UserDetails {
     @Override public String  getPassword()             { return passwordHash; }
     @Override public String  getUsername()             { return phoneNumber;  }
     @Override public boolean isAccountNonExpired()     { return true;         }
-    @Override public boolean isAccountNonLocked()      { return active;       }
+    @Override public boolean isAccountNonLocked() {
+        return lockedUntil == null || lockedUntil.isBefore(LocalDateTime.now());
+    }
     @Override public boolean isCredentialsNonExpired() { return true;         }
     @Override public boolean isEnabled()               { return active;       }
 

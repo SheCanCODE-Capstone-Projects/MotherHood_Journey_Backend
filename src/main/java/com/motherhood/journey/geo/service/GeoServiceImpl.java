@@ -5,6 +5,7 @@ import com.motherhood.journey.geo.dto.response.GeoSummaryResponseDTO;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.geo.repository.GeoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ public class GeoServiceImpl implements GeoService {
     // Returns all distinct province names
     // Used for the first dropdown on the registration form
     @Override
+    @Cacheable("geoLookup")
     public List<String> getProvinces() {
         return repository.findByActiveTrue()
                 .stream()

@@ -33,5 +33,7 @@ public interface PregnancyRepository extends JpaRepository<Pregnancy, UUID> {
 
     Optional<Pregnancy> findFirstByMotherIdAndStatusOrderByCreatedAtDesc(UUID motherId, String status);
 
+    boolean existsByMotherIdAndStatus(UUID motherId, String status);
+
     long countByStatus(String status);
 }

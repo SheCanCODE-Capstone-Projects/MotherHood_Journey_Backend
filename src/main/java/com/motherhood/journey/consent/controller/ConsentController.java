@@ -17,6 +17,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/consents")
 @Validated
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Consent",
+    description = "Data-sharing consent under Rwanda Law No. 058/2021 (grant + revoke)")
 public class ConsentController {
 
     private final ConsentService consentService;

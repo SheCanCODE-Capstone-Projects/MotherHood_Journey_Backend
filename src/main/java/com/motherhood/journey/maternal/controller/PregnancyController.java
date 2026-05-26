@@ -5,6 +5,8 @@ import com.motherhood.journey.maternal.dto.request.CreatePregnancyRequest;
 import com.motherhood.journey.maternal.dto.request.UpdatePregnancyRequest;
 import com.motherhood.journey.maternal.dto.response.PregnancyResponse;
 import com.motherhood.journey.maternal.service.PregnancyService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/pregnancies")
+@Tag(name = "Pregnancies", description = "Pregnancy lifecycle (ACTIVE / DELIVERED / LOST / TRANSFERRED), EDD, CHW assignment")
 public class PregnancyController {
 
     private final PregnancyService pregnancyService;
@@ -26,6 +29,8 @@ public class PregnancyController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Open a new pregnancy",
+        description = "Rejects if the mother already has an ACTIVE pregnancy. Computes EDD from LMP if not supplied.")
     public ResponseEntity<ApiResponse<PregnancyResponse>> createPregnancy(
         @Valid @RequestBody CreatePregnancyRequest request
     ) {
@@ -35,6 +40,7 @@ public class PregnancyController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "Get a pregnancy by UUID (facility-scoped)")
     public ResponseEntity<ApiResponse<PregnancyResponse>> getPregnancyById(
         @PathVariable UUID id,
         @RequestParam UUID facilityId
@@ -45,6 +51,7 @@ public class PregnancyController {
 
     @GetMapping("/by-mother/{motherId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List all pregnancies for a mother")
     public ResponseEntity<ApiResponse<List<PregnancyResponse>>> getPregnanciesByMother(
         @PathVariable UUID motherId,
         @RequestParam UUID facilityId
@@ -55,6 +62,8 @@ public class PregnancyController {
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Update a pregnancy (status transitions enforced)",
+        description = "Allowed transitions from ACTIVE: DELIVERED, LOST, TRANSFERRED. Terminal states cannot be reopened.")
     public ResponseEntity<ApiResponse<PregnancyResponse>> updatePregnancy(
         @PathVariable UUID id,
         @RequestParam UUID facilityId,
