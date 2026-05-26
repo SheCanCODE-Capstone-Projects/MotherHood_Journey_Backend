@@ -4,6 +4,8 @@ import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.government.dto.response.ServiceRequestDocResponse;
 import com.motherhood.journey.government.enums.DocumentType;
 import com.motherhood.journey.government.service.ServiceRequestDocService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +30,8 @@ public class ServiceRequestDocController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Attach a document to a service request",
+        description = "Requires an authenticated user.")
     public ResponseEntity<ApiResponse<ServiceRequestDocResponse>> attach(
         @PathVariable UUID requestId,
         @RequestParam("documentType") DocumentType documentType,
@@ -40,6 +44,8 @@ public class ServiceRequestDocController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List documents attached to a service request",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<List<ServiceRequestDocResponse>>> getByRequest(
         @PathVariable UUID requestId
     ) {

@@ -8,6 +8,8 @@ import com.motherhood.journey.facility.dto.response.FacilityResponse;
 import com.motherhood.journey.facility.entity.FacilityType;
 import com.motherhood.journey.facility.service.FacilityAnalyticsService;
 import com.motherhood.journey.facility.service.FacilityService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.Page;
@@ -39,6 +41,8 @@ public class FacilityController {
 
     @GetMapping("/{id}/analytics")
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "Get per-facility analytics",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<FacilityAnalyticsResponse>> getAnalytics(@PathVariable UUID id) {
         return ResponseEntity.ok(
             ApiResponse.success(analyticsService.computeFor(id), "Analytics computed"));
@@ -46,6 +50,8 @@ public class FacilityController {
 
     @PostMapping
     @PreAuthorize("hasRole('MOH_ADMIN')")
+    @Operation(summary = "Create a new facility",
+        description = "Restricted to MOH_ADMIN.")
     public ResponseEntity<ApiResponse<FacilityResponse>> createFacility(
         @Valid @RequestBody CreateFacilityRequest request
     ) {
@@ -59,6 +65,8 @@ public class FacilityController {
      */
     @GetMapping
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "List active facilities (optionally filter by district or type)",
+        description = "Requires an authenticated user.")
     public ResponseEntity<ApiResponse<Page<FacilityResponse>>> getFacilities(
         @RequestParam(required = false) @Size(max = 64) String district,
         @RequestParam(required = false) FacilityType facilityType,
@@ -71,6 +79,8 @@ public class FacilityController {
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get a facility by ID",
+        description = "Requires an authenticated user.")
     public ResponseEntity<ApiResponse<FacilityResponse>> getFacilityById(@PathVariable UUID id) {
         return ResponseEntity.ok(
             ApiResponse.success(facilityService.getFacilityById(id), "Facility retrieved successfully"));
@@ -78,6 +88,8 @@ public class FacilityController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Update a facility",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<FacilityResponse>> updateFacility(
         @PathVariable UUID id,
         @Valid @RequestBody UpdateFacilityRequest request
@@ -88,6 +100,8 @@ public class FacilityController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('MOH_ADMIN')")
+    @Operation(summary = "Delete a facility",
+        description = "Restricted to MOH_ADMIN.")
     public ResponseEntity<Void> deleteFacility(@PathVariable UUID id) {
         facilityService.deleteFacility(id);
         return ResponseEntity.noContent().build();

@@ -4,6 +4,8 @@ import com.motherhood.journey.child.dto.request.AdministerVaccinationRequest;
 import com.motherhood.journey.child.dto.response.VaccinationRecordResponse;
 import com.motherhood.journey.child.service.VaccinationService;
 import com.motherhood.journey.common.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,8 @@ public class VaccinationController {
 
     @GetMapping("/by-child/{childId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List vaccination records for a child",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<List<VaccinationRecordResponse>>> getByChild(
         @PathVariable UUID childId,
         @RequestParam UUID facilityId
@@ -36,6 +40,8 @@ public class VaccinationController {
 
     @PatchMapping("/{id}/administer")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Mark a vaccine as administered",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<VaccinationRecordResponse>> administer(
         @PathVariable UUID id,
         @RequestParam UUID facilityId,

@@ -6,6 +6,8 @@ import com.motherhood.journey.appointment.dto.response.AppointmentResponse;
 import com.motherhood.journey.appointment.service.AppointmentService;
 import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.maternal.enums.PatientType;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,8 @@ public class AppointmentController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','MOH_ADMIN')")
+    @Operation(summary = "Create a new appointment",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<AppointmentResponse> create(
             @RequestBody CreateAppointmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -37,6 +41,8 @@ public class AppointmentController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','MOH_ADMIN')")
+    @Operation(summary = "Update an appointment",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<AppointmentResponse> update(
             @PathVariable UUID id,
             @RequestParam UUID facilityId,
@@ -46,6 +52,8 @@ public class AppointmentController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','DISTRICT_OFFICER','MOH_ADMIN')")
+    @Operation(summary = "Get an appointment by ID",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, DISTRICT_OFFICER, MOH_ADMIN.")
     public ResponseEntity<AppointmentResponse> getById(
             @PathVariable UUID id,
             @RequestParam UUID facilityId) {
@@ -54,6 +62,8 @@ public class AppointmentController {
 
     @GetMapping("/patient/{patientRefId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN','DISTRICT_OFFICER','MOH_ADMIN')")
+    @Operation(summary = "List appointments for a patient",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, DISTRICT_OFFICER, MOH_ADMIN.")
     public ResponseEntity<List<AppointmentResponse>> getByPatient(
             @PathVariable UUID patientRefId,
             @RequestParam String patientType,

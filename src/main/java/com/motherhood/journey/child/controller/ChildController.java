@@ -5,6 +5,8 @@ import com.motherhood.journey.child.dto.request.CreateChildRequest;
 import com.motherhood.journey.child.dto.request.UpdateChildRequest;
 import com.motherhood.journey.child.dto.response.ChildResponse;
 import com.motherhood.journey.child.service.ChildService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +32,8 @@ public class ChildController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Register a new child",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<ChildResponse>> registerChild(
         @Valid @RequestBody CreateChildRequest request
     ) {
@@ -39,6 +43,8 @@ public class ChildController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "Get a child by ID",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<ChildResponse>> getChildById(
         @PathVariable UUID id,
         @RequestParam UUID facilityId
@@ -49,6 +55,8 @@ public class ChildController {
 
     @GetMapping("/by-mother/{motherId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List children by mother",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<Page<ChildResponse>>> getChildrenByMother(
         @PathVariable UUID motherId,
         @RequestParam UUID facilityId,
@@ -60,6 +68,8 @@ public class ChildController {
 
     @GetMapping("/by-facility/{facilityId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List children by facility",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<Page<ChildResponse>>> getChildrenByFacility(
         @PathVariable UUID facilityId,
         @PageableDefault(size = 20, sort = "registeredAt") Pageable pageable
@@ -70,6 +80,8 @@ public class ChildController {
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Update a child",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<ChildResponse>> updateChild(
         @PathVariable UUID id,
         @RequestParam UUID facilityId,

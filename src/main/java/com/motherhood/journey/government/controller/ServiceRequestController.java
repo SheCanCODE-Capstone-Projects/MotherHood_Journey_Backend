@@ -4,6 +4,8 @@ import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.government.dto.request.SubmitServiceRequestRequest;
 import com.motherhood.journey.government.dto.response.ServiceRequestResponse;
 import com.motherhood.journey.government.service.ServiceRequestService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Page;
@@ -32,6 +34,8 @@ public class ServiceRequestController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Submit a new government service request",
+        description = "Requires an authenticated user.")
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> submit(
         @Valid @RequestBody SubmitServiceRequestRequest request
     ) {
@@ -41,6 +45,8 @@ public class ServiceRequestController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "Get a service request by ID",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(
             ApiResponse.success(serviceRequestService.getById(id), "Service request retrieved"));
@@ -48,6 +54,8 @@ public class ServiceRequestController {
 
     @GetMapping("/by-facility/{facilityId}")
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List service requests by facility",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<Page<ServiceRequestResponse>>> getByFacility(
         @PathVariable UUID facilityId,
         @PageableDefault(size = 20, sort = "submittedAt") Pageable pageable
@@ -58,6 +66,8 @@ public class ServiceRequestController {
 
     @GetMapping("/by-status")
     @PreAuthorize("hasAnyRole('MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List service requests filtered by status",
+        description = "Restricted to MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<Page<ServiceRequestResponse>>> getByStatus(
         @RequestParam String status,
         @PageableDefault(size = 20, sort = "submittedAt") Pageable pageable
@@ -68,6 +78,8 @@ public class ServiceRequestController {
 
     @PatchMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Approve a service request",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> approve(@PathVariable UUID id) {
         return ResponseEntity.ok(
             ApiResponse.success(serviceRequestService.approve(id), "Service request approved"));
@@ -75,6 +87,8 @@ public class ServiceRequestController {
 
     @PatchMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Reject a service request",
+        description = "Restricted to FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> reject(
         @PathVariable UUID id,
         @RequestParam @NotBlank String reason

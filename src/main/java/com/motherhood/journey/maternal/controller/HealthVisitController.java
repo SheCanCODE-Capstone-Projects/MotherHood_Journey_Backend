@@ -6,6 +6,8 @@ import com.motherhood.journey.maternal.dto.request.UpdateHealthVisitRequest;
 import com.motherhood.journey.maternal.dto.response.HealthVisitResponse;
 import com.motherhood.journey.maternal.enums.PatientType;
 import com.motherhood.journey.maternal.service.HealthVisitService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,8 @@ public class HealthVisitController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Record a new health visit",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<HealthVisitResponse>> createVisit(
         @Valid @RequestBody CreateHealthVisitRequest request
     ) {
@@ -42,6 +46,8 @@ public class HealthVisitController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "Get a health visit by ID",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<HealthVisitResponse>> getVisitById(
         @PathVariable UUID id,
         @RequestParam UUID facilityId
@@ -52,6 +58,8 @@ public class HealthVisitController {
 
     @GetMapping("/by-facility/{facilityId}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List health visits by facility",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<Page<HealthVisitResponse>>> getVisitsByFacility(
         @PathVariable UUID facilityId,
         @PageableDefault(size = 20, sort = "visitDatetime") Pageable pageable
@@ -62,6 +70,8 @@ public class HealthVisitController {
 
     @GetMapping("/by-patient")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN', 'DISTRICT_OFFICER')")
+    @Operation(summary = "List health visits by patient",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN, DISTRICT_OFFICER.")
     public ResponseEntity<ApiResponse<Page<HealthVisitResponse>>> getVisitsByPatient(
         @RequestParam UUID patientRefId,
         @RequestParam PatientType patientType,
@@ -75,6 +85,8 @@ public class HealthVisitController {
 
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
+    @Operation(summary = "Update a health visit",
+        description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<ApiResponse<HealthVisitResponse>> updateVisit(
         @PathVariable UUID id,
         @RequestParam UUID facilityId,

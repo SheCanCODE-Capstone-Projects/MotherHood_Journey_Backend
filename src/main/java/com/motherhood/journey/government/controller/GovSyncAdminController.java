@@ -5,6 +5,8 @@ import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.government.entity.GovSyncLog;
 import com.motherhood.journey.government.enums.SyncStatus;
 import com.motherhood.journey.government.repository.GovSyncLogRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,6 +32,8 @@ public class GovSyncAdminController {
     }
 
     @GetMapping("/status")
+    @Operation(summary = "Get outbox sync counters by status",
+        description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
     public ResponseEntity<ApiResponse<Map<String, Long>>> status() {
         Map<String, Long> counts = Map.of(
             "pending",     (long) repository.findByStatusOrderByCreatedAtDesc(SyncStatus.PENDING).size(),
@@ -41,12 +45,16 @@ public class GovSyncAdminController {
     }
 
     @GetMapping("/dead-letter")
+    @Operation(summary = "List dead-letter sync entries",
+        description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
     public ResponseEntity<ApiResponse<List<GovSyncLog>>> deadLetterQueue() {
         return ResponseEntity.ok(ApiResponse.success(repository.findByDeadLetterTrue(), "Dead-letter entries"));
     }
 
     @PostMapping("/{id}/retry")
     @Transactional
+    @Operation(summary = "Retry a failed sync entry",
+        description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
     public ResponseEntity<ApiResponse<Void>> retry(@PathVariable UUID id) {
         GovSyncLog entry = repository.findById(id)
             .orElseThrow(() -> new CustomException("GovSyncLog entry not found", HttpStatus.NOT_FOUND));

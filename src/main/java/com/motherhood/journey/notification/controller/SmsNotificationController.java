@@ -3,6 +3,8 @@ package com.motherhood.journey.notification.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.motherhood.journey.notification.dto.request.DeliveryWebhookRequest;
 import com.motherhood.journey.notification.service.WebhookService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,7 @@ public class SmsNotificationController {
     // Receives delivery status callbacks from Africa's Talking
     // This endpoint is PUBLIC
     @PostMapping("/delivery")
+    @Operation(summary = "Handle Africa's Talking SMS delivery callback")
     public ResponseEntity<Void> handleDeliveryStatus(
             // The raw request body as a String for signature validation
             @RequestBody String rawBody,
