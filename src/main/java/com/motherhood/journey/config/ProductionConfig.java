@@ -47,9 +47,9 @@ public class ProductionConfig {
     /**
      * Caffeine cache for non-prod profiles. In-process, single-instance.
      */
-    @Bean
+    @Bean(name = "cacheManager")
     @Profile("!prod")
-    public CacheManager cacheManager() {
+    public CacheManager caffeineCacheManager() {
         CaffeineCacheManager manager = new CaffeineCacheManager("userDetails", "geoLookup", "facilityLookup");
         manager.setCaffeine(Caffeine.newBuilder()
             .expireAfterWrite(1, TimeUnit.MINUTES)
@@ -60,9 +60,9 @@ public class ProductionConfig {
     /**
      * Redis cache for prod. Shared across replicas, survives restarts.
      */
-    @Bean
+    @Bean(name = "cacheManager")
     @Profile("prod")
-    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    public CacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(1))
             .disableCachingNullValues()
