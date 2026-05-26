@@ -1,10 +1,12 @@
 package com.motherhood.journey.geo.service;
 
+import com.motherhood.journey.common.exception.ResourceNotFoundException;
 import com.motherhood.journey.geo.dto.response.GeoResponse;
 import com.motherhood.journey.geo.dto.response.GeoSummaryResponseDTO;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.geo.repository.GeoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class GeoServiceImpl implements GeoService {
     // Returns all distinct province names
     // Used for the first dropdown on the registration form
     @Override
+    @Cacheable("geoLookup")
     public List<String> getProvinces() {
         return repository.findByActiveTrue()
                 .stream()
@@ -88,7 +91,7 @@ public class GeoServiceImpl implements GeoService {
         GeoLocation geo = repository
                 .findByProvinceAndDistrictAndSectorAndCellAndVillage(
                         province, district, sector, cell, village)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Location not found for the given path"));
 
         return convertToResponse(geo);
@@ -99,7 +102,7 @@ public class GeoServiceImpl implements GeoService {
     @Override
     public GeoSummaryResponseDTO getSummary(UUID id) {
         GeoLocation geo = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Location not found with id: " + id));
 
         return convertToSummary(geo);

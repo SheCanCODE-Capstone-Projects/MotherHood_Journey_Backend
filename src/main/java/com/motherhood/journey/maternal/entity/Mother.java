@@ -5,22 +5,10 @@ import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.maternal.enums.NidaVerifiedStatus;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
@@ -34,6 +22,8 @@ import java.util.UUID;
         @Index(name = "idx_mother_geo", columnList = "geo_location_id"),
         @Index(name = "idx_mother_nida_status", columnList = "nida_verified_status")
 })
+@SQLDelete(sql = "UPDATE mothers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -75,4 +65,12 @@ public class Mother {
     @Column(name = "registered_at", updatable = false)
     @Builder.Default
     private LocalDateTime registeredAt = LocalDateTime.now();
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private long version = 0L;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

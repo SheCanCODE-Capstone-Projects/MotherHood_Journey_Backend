@@ -3,6 +3,8 @@ package com.motherhood.journey.notification.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.motherhood.journey.notification.dto.request.DeliveryWebhookRequest;
 import com.motherhood.journey.notification.service.WebhookService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/webhooks/at")
 @RequiredArgsConstructor
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Webhooks (Africa's Talking)",
+    description = "HMAC-validated delivery callbacks from Africa's Talking. Public, signature-checked.")
 @Slf4j
 public class SmsNotificationController {
 
@@ -26,17 +30,17 @@ public class SmsNotificationController {
     // Receives delivery status callbacks from Africa's Talking
     // This endpoint is PUBLIC
     @PostMapping("/delivery")
+    @Operation(summary = "Handle Africa's Talking SMS delivery callback")
     public ResponseEntity<Void> handleDeliveryStatus(
-            // The raw request body as a String for signature validation
             @RequestBody String rawBody,
+            @RequestHeader(value = "X-Africastalking-Signature", required = false) String primarySignature,
+            @RequestHeader(value = "X-AT-Signature",            required = false) String legacySignature) {
 
-            // Africa's Talking sends their signature in this header
-            @RequestHeader(
-                    value = "X-AT-Signature",
-                    required = false
-            ) String signature) {
+        // Accept the conventional header name first; fall back to the legacy X-AT-Signature
+        // so existing webhook configurations on AT's side continue to work.
+        String signature = primarySignature != null && !primarySignature.isBlank()
+            ? primarySignature : legacySignature;
 
-        // Validate the signature
         if (signature == null || signature.isBlank()) {
             log.warn("Webhook received without signature — rejected");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
@@ -60,7 +64,7 @@ public class SmsNotificationController {
 
         } catch (Exception e) {
             log.error("Failed to process delivery webhook: {}",
-                    e.getMessage());
+                    e.getMessage(), e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .build();

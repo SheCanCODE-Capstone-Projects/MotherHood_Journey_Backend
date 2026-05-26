@@ -19,6 +19,7 @@ import com.motherhood.journey.maternal.entity.Mother;
 import com.motherhood.journey.maternal.repository.MotherRepository;
 import com.motherhood.journey.notification.enums.NotificationType;
 import com.motherhood.journey.notification.service.NotificationService;
+import com.motherhood.journey.notification.service.SmsTemplateService;
 import com.motherhood.journey.security.FacilityAuthDetails;
 import com.motherhood.journey.security.FacilityScope;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,7 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final MotherRepository motherRepository;
     private final ChildRepository childRepository;
     private final NotificationService notificationService;
+    private final SmsTemplateService smsTemplateService;
 
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
                                   FacilityRepository facilityRepository,
@@ -56,7 +58,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                                   UserRepository userRepository,
                                   MotherRepository motherRepository,
                                   ChildRepository childRepository,
-                                  NotificationService notificationService) {
+                                  NotificationService notificationService,
+                                  SmsTemplateService smsTemplateService) {
         this.appointmentRepository = appointmentRepository;
         this.facilityRepository = facilityRepository;
         this.geoRepository = geoRepository;
@@ -64,6 +67,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         this.motherRepository = motherRepository;
         this.childRepository = childRepository;
         this.notificationService = notificationService;
+        this.smsTemplateService = smsTemplateService;
     }
 
     @Override
@@ -84,6 +88,9 @@ public class AppointmentServiceImpl implements AppointmentService {
         Facility facility = facilityRepository.findById(request.facilityId())
             .orElseThrow(() -> new CustomException("Facility not found", HttpStatus.NOT_FOUND));
 
+        assertSlotHasCapacity(request.facilityId(), request.scheduledAt());
+        assertNoPatientOverlap(request.patientRefId(), request.scheduledAt());
+
         User healthWorker = null;
         if (request.healthWorkerId() != null) {
             healthWorker = userRepository.findById(request.healthWorkerId())
@@ -103,7 +110,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             .healthWorker(healthWorker)
             .geoLocation(geoLocation)
             .scheduledAt(request.scheduledAt())
-            .appointmentType(AppointmentType.valueOf(request.appointmentType()))
+            .appointmentType(parseAppointmentType(request.appointmentType()))
             .notes(request.notes())
             .build();
 
@@ -139,18 +146,10 @@ public class AppointmentServiceImpl implements AppointmentService {
     @FacilityScope
     public AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request) {
         Appointment appointment = findByIdAndFacility(id, facilityId);
-        if (request.scheduledAt() != null) {
-            appointment.setScheduledAt(request.scheduledAt());
-        }
-        if (request.appointmentType() != null) {
-            appointment.setAppointmentType(AppointmentType.valueOf(request.appointmentType()));
-        }
-        if (request.status() != null) {
-            appointment.setStatus(AppointmentStatus.valueOf(request.status()));
-        }
-        if (request.notes() != null) {
-            appointment.setNotes(request.notes());
-        }
+        if (request.scheduledAt() != null)     appointment.setScheduledAt(request.scheduledAt());
+        if (request.appointmentType() != null) appointment.setAppointmentType(parseAppointmentType(request.appointmentType()));
+        if (request.status() != null)          appointment.setStatus(parseAppointmentStatus(request.status()));
+        if (request.notes() != null)          appointment.setNotes(request.notes());
         if (request.healthWorkerId() != null) {
             User hw = userRepository.findById(request.healthWorkerId())
                 .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
@@ -186,11 +185,13 @@ public class AppointmentServiceImpl implements AppointmentService {
                         appointment.getId());
                     continue;
                 }
-                String message = "Reminder: You have a "
-                        + appointment.getAppointmentType().name().toLowerCase()
-                        + " appointment scheduled at " + appointment.getScheduledAt()
-                        + " at " + appointment.getFacility().getName() + ".";
-                notificationService.enqueueRaw(recipientOpt.get(), message, NotificationType.APPOINTMENT);
+                User patient = recipientOpt.get();
+                String message = smsTemplateService.render(
+                        "sms.appointment.reminder",
+                        patient.getPreferredLanguage(),
+                        appointment.getScheduledAt().toLocalDate(),
+                        appointment.getScheduledAt().toLocalTime());
+                notificationService.enqueueRaw(patient, message, NotificationType.APPOINTMENT);
                 appointment.setReminderSent(true);
                 log.debug("Reminder enqueued for appointment {}", appointment.getId());
             } catch (Exception e) {
@@ -207,7 +208,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             return motherRepository.findById(patientRefId).map(Mother::getUser);
         } else if ("CHILD".equalsIgnoreCase(patientType)) {
             return childRepository.findById(patientRefId)
-                    .map(child -> child.getMother().getUser());
+                    .map(child -> child.getMother() != null ? child.getMother().getUser() : null);
         }
         return Optional.empty();
     }
@@ -215,5 +216,52 @@ public class AppointmentServiceImpl implements AppointmentService {
     private Appointment findByIdAndFacility(UUID id, UUID facilityId) {
         return appointmentRepository.findByIdAndFacility_Id(id, facilityId)
             .orElseThrow(() -> new CustomException("Appointment not found", HttpStatus.NOT_FOUND));
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${appointment.slot-minutes:30}")
+    private int slotMinutes;
+
+    @org.springframework.beans.factory.annotation.Value("${appointment.max-per-slot:10}")
+    private int maxPerSlot;
+
+    private AppointmentType parseAppointmentType(String raw) {
+        try {
+            return AppointmentType.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            throw new CustomException("Invalid appointmentType: " + raw, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private AppointmentStatus parseAppointmentStatus(String raw) {
+        try {
+            return AppointmentStatus.valueOf(raw);
+        } catch (IllegalArgumentException e) {
+            throw new CustomException("Invalid status: " + raw, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void assertNoPatientOverlap(UUID patientRefId, LocalDateTime scheduledAt) {
+        if (patientRefId == null || scheduledAt == null) return;
+        LocalDateTime slotStart = scheduledAt.withSecond(0).withNano(0);
+        LocalDateTime slotEnd = slotStart.plusMinutes(slotMinutes);
+        long overlapping = appointmentRepository.countOverlappingForPatient(patientRefId, slotStart, slotEnd);
+        if (overlapping > 0) {
+            throw new CustomException(
+                "Patient already has a scheduled appointment in this time slot",
+                HttpStatus.CONFLICT);
+        }
+    }
+
+    private void assertSlotHasCapacity(UUID facilityId, LocalDateTime scheduledAt) {
+        if (scheduledAt == null) return;
+        int minute = scheduledAt.getMinute() - (scheduledAt.getMinute() % slotMinutes);
+        LocalDateTime slotStart = scheduledAt.withMinute(minute).withSecond(0).withNano(0);
+        LocalDateTime slotEnd = slotStart.plusMinutes(slotMinutes);
+        long booked = appointmentRepository.countScheduledInSlot(facilityId, slotStart, slotEnd);
+        if (booked >= maxPerSlot) {
+            throw new CustomException(
+                "Facility is at capacity for slot " + slotStart + " (max " + maxPerSlot + ")",
+                HttpStatus.CONFLICT);
+        }
     }
 }

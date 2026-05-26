@@ -18,6 +18,9 @@ public interface ChildRepository extends JpaRepository<Child, UUID> {
     List<Child> findByFacilityId(UUID facilityId);
 
     boolean existsByBirthCertificateNo(String birthCertificateNo);
+
+    boolean existsByMother_IdAndFirstNameIgnoreCaseAndDateOfBirth(
+        UUID motherId, String firstName, java.time.LocalDate dateOfBirth);
     Page<Child> findByMother_IdAndFacility_Id(UUID motherId, UUID facilityId, Pageable pageable);
 
     Page<Child> findByFacility_Id(UUID facilityId, Pageable pageable);

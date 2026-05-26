@@ -27,6 +27,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     long countByStatus(AppointmentStatus status);
 
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.facility.id = :facilityId " +
+           "AND a.status = 'SCHEDULED' " +
+           "AND a.scheduledAt >= :slotStart AND a.scheduledAt < :slotEnd")
+    long countScheduledInSlot(@Param("facilityId") UUID facilityId,
+                              @Param("slotStart") LocalDateTime slotStart,
+                              @Param("slotEnd") LocalDateTime slotEnd);
+
+    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.patientRefId = :patientRefId " +
+           "AND a.status = 'SCHEDULED' " +
+           "AND a.scheduledAt >= :slotStart AND a.scheduledAt < :slotEnd")
+    long countOverlappingForPatient(@Param("patientRefId") UUID patientRefId,
+                                    @Param("slotStart") LocalDateTime slotStart,
+                                    @Param("slotEnd") LocalDateTime slotEnd);
+
     @Query("SELECT a FROM Appointment a WHERE a.status = 'SCHEDULED' " +
            "AND a.reminderSent = false " +
            "AND a.scheduledAt BETWEEN :from AND :to")

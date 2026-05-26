@@ -28,6 +28,30 @@ services:
     networks:
       - motherhood_net
 
+  # ── Redis (cache + distributed locks) ───────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: motherhood_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
+    networks:
+      - motherhood_net
+
   # ── Spring Boot Application ────────────────────────────────────
   app:
     build:
@@ -85,6 +109,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

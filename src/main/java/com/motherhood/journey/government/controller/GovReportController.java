@@ -22,6 +22,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/gov-reports")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Government Reports",
+    description = "Aggregate analytics for MoH: vaccination coverage, ANC, birth registration, maternal health")
 public class GovReportController {
 
     private final GovReportService govReportService;

@@ -1,5 +1,6 @@
 package com.motherhood.journey.government.service;
 
+import com.motherhood.journey.common.audit.AuditedResource;
 import com.motherhood.journey.common.enums.AuditAction;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.common.service.AuditService;
@@ -75,6 +76,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     }
 
     @Override
+    @AuditedResource(action = "CREATE", resourceType = "SERVICE_REQUEST")
     public ServiceRequestResponse submit(SubmitServiceRequestRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
@@ -165,6 +167,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     }
 
     @Override
+    @AuditedResource(action = "UPDATE", resourceType = "SERVICE_REQUEST")
     public ServiceRequestResponse approve(UUID id) {
         ServiceRequest sr = findById(id);
         assertNotTerminal(sr);
@@ -177,6 +180,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     }
 
     @Override
+    @AuditedResource(action = "UPDATE", resourceType = "SERVICE_REQUEST")
     public ServiceRequestResponse reject(UUID id, String reason) {
         if (reason == null || reason.isBlank()) {
             throw new CustomException("Rejection reason is required", HttpStatus.BAD_REQUEST);

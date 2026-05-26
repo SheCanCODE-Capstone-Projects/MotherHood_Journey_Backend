@@ -1,5 +1,6 @@
 package com.motherhood.journey.maternal.service;
 
+import com.motherhood.journey.common.audit.AuditedResource;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
@@ -30,6 +31,7 @@ public class MotherService {
     private final UserRepository userRepository;
 
     @Transactional
+    @AuditedResource(action = "CREATE", resourceType = "MOTHER")
     public MotherResponse registerMother(CreatedMotherRequest request) {
         if (motherRepository.existsByUserId(request.userId())) {
             throw new IllegalStateException("Mother already registered for this user");
@@ -63,13 +65,19 @@ public class MotherService {
     }
 
     @Transactional(readOnly = true)
+    @AuditedResource(action = "READ", resourceType = "MOTHER")
     public MotherResponse getMotherById(UUID id, User caller) {
         Mother mother = motherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mother not found: " + id));
         // Re-fetch caller in this transaction to avoid LazyInitializationException on the
-        // facility proxy — the caller was loaded in a separate Hibernate session by JwtFilter.
+        // facility/geoLocation proxies — the caller was loaded in a separate Hibernate
+        // session by JwtFilter and is detached by the time we reach this method.
         User freshCaller = userRepository.findById(caller.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Caller not found: " + caller.getId()));
+        // Geo scope is per-request (carried on FacilityAuthDetails) — never on the
+        // shared cached User. Source it from the current authentication's details.
+        freshCaller.setScopedGeoIds(com.motherhood.journey.security.RbacUtils.currentGeoScopeIds());
+
         enforceScope(mother, freshCaller);
         return MotherResponse.from(mother);
     }
@@ -108,9 +116,9 @@ public class MotherService {
 
     private String generateHealthId() {
         int year = Year.now().getValue();
-        long seq = (Long) entityManager
+        long seq = ((Number) entityManager
                 .createNativeQuery("SELECT nextval('seq_mother_health_id')")
-                .getSingleResult();
+                .getSingleResult()).longValue();
         return String.format("MH-%d-%06d", year, seq);
     }
 }

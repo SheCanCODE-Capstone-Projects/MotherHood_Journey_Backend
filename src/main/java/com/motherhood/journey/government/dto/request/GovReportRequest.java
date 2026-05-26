@@ -13,5 +13,5 @@ public record GovReportRequest(
     @NotNull @Size(max = 16) String period,
     @NotNull ScopeLevel scopeLevel,
     @NotNull UUID geoLocationId,
-    @NotNull Map<String, Object> aggregates
+    Map<String, Object> aggregates
 ) {}

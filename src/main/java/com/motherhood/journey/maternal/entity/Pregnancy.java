@@ -1,14 +1,9 @@
 package com.motherhood.journey.maternal.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDate;
@@ -16,8 +11,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "pregnancies")
+@Table(name = "pregnancies")
+@SQLDelete(sql = "UPDATE pregnancies SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND version = ?")
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -68,4 +64,12 @@ public class Pregnancy {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private long version = 0L;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

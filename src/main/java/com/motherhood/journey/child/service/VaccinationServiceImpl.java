@@ -6,6 +6,7 @@ import com.motherhood.journey.child.entity.VaccinationRecord;
 import com.motherhood.journey.child.enums.VaccinationStatus;
 import com.motherhood.journey.child.repository.VaccinationRecordRepository;
 import com.motherhood.journey.child.repository.VaccinationRepository;
+import com.motherhood.journey.common.audit.AuditedResource;
 import com.motherhood.journey.common.enums.AuditAction;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.common.service.AuditService;
@@ -55,6 +56,7 @@ public class VaccinationServiceImpl implements VaccinationService {
 
     @Override
     @FacilityScope
+    @AuditedResource(action = "UPDATE", resourceType = "VACCINATION_RECORD")
     public VaccinationRecordResponse administer(UUID recordId, UUID facilityId,
                                                 AdministerVaccinationRequest request) {
         VaccinationRecord record = vaccinationRecordRepository.findByIdAndFacility_Id(recordId, facilityId)
@@ -63,6 +65,8 @@ public class VaccinationServiceImpl implements VaccinationService {
         if ("ADMINISTERED".equals(record.getStatus())) {
             throw new CustomException("Vaccination already administered", HttpStatus.CONFLICT);
         }
+
+        validateAdministrationDate(record, request.administeredDate());
 
         User administeredBy = userRepository.findById(request.administeredById())
             .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
@@ -102,5 +106,29 @@ public class VaccinationServiceImpl implements VaccinationService {
         }
 
         log.info("Overdue scan complete — {} records flipped to OVERDUE", overdue.size());
+    }
+
+    private void validateAdministrationDate(VaccinationRecord record, LocalDate administeredDate) {
+        if (administeredDate == null) {
+            throw new CustomException("Administered date is required", HttpStatus.BAD_REQUEST);
+        }
+        LocalDate today = LocalDate.now();
+        if (administeredDate.isAfter(today)) {
+            throw new CustomException("Administered date cannot be in the future", HttpStatus.BAD_REQUEST);
+        }
+        LocalDate childDob = record.getChild() != null ? record.getChild().getDateOfBirth() : null;
+        if (childDob != null && administeredDate.isBefore(childDob)) {
+            throw new CustomException("Administered date is before child's date of birth",
+                HttpStatus.BAD_REQUEST);
+        }
+        Integer dueAgeDays = record.getSchedule() != null ? record.getSchedule().getDueAgeDays() : null;
+        if (childDob != null && dueAgeDays != null) {
+            LocalDate earliest = childDob.plusDays(dueAgeDays);
+            if (administeredDate.isBefore(earliest)) {
+                throw new CustomException(
+                    "Administered too early: vaccine not due until " + earliest,
+                    HttpStatus.BAD_REQUEST);
+            }
+        }
     }
 }

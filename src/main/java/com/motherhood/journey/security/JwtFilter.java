@@ -17,6 +17,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 @Component
@@ -45,12 +46,16 @@ public class JwtFilter extends OncePerRequestFilter {
             if (token != null && jwtUtil.isTokenValid(token)) {
                 String phoneNumber = jwtUtil.extractPhoneNumber(token);
                 UUID facilityId = jwtUtil.extractFacilityId(token);
+                List<UUID> geoScopeIds = jwtUtil.extractGeoScopeIds(token);
 
                 UserDetails userDetails = loadCached(phoneNumber);
 
+                // Do NOT mutate the cached User — it is shared across concurrent
+                // requests for the same phone number. Geo-scope lives on the
+                // per-request FacilityAuthDetails instead.
                 UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new FacilityAuthDetails(facilityId));
+                authentication.setDetails(new FacilityAuthDetails(facilityId, geoScopeIds));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (JwtException ex) {
