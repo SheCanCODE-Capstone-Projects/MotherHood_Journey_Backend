@@ -56,7 +56,9 @@ public class AuditService {
 
     private java.util.Optional<com.motherhood.journey.identity.entity.User> resolveUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return java.util.Optional.empty();
+        if (auth == null || !auth.isAuthenticated()) {
+            return java.util.Optional.empty();
+        }
         return userRepository.findByPhoneNumber(auth.getName());
     }
 }

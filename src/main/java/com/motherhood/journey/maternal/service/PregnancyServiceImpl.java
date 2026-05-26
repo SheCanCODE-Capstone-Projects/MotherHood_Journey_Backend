@@ -106,12 +106,24 @@ public class PregnancyServiceImpl implements PregnancyService {
     @FacilityScope
     public PregnancyResponse updatePregnancy(UUID id, UUID facilityId, UpdatePregnancyRequest request) {
         Pregnancy pregnancy = findByIdAndFacility(id, facilityId);
-        if (request.lmpDate() != null)      pregnancy.setLmpDate(request.lmpDate());
-        if (request.edd() != null)          pregnancy.setEdd(request.edd());
-        if (request.status() != null)       pregnancy.setStatus(request.status());
-        if (request.gravida() != null)      pregnancy.setGravida(request.gravida());
-        if (request.para() != null)         pregnancy.setPara(request.para());
-        if (request.outcomeNotes() != null) pregnancy.setOutcomeNotes(request.outcomeNotes());
+        if (request.lmpDate() != null) {
+            pregnancy.setLmpDate(request.lmpDate());
+        }
+        if (request.edd() != null) {
+            pregnancy.setEdd(request.edd());
+        }
+        if (request.status() != null) {
+            pregnancy.setStatus(request.status());
+        }
+        if (request.gravida() != null) {
+            pregnancy.setGravida(request.gravida());
+        }
+        if (request.para() != null) {
+            pregnancy.setPara(request.para());
+        }
+        if (request.outcomeNotes() != null) {
+            pregnancy.setOutcomeNotes(request.outcomeNotes());
+        }
         if (request.assignedChwId() != null) {
             User chw = userRepository.findById(request.assignedChwId())
                 .orElseThrow(() -> new CustomException("CHW not found", HttpStatus.NOT_FOUND));

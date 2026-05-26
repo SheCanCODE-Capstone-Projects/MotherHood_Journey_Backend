@@ -5,7 +5,6 @@ import com.motherhood.journey.government.enums.SyncStatus;
 import com.motherhood.journey.government.repository.GovSyncLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -59,7 +58,9 @@ public class GovSyncOutboxDelegate {
                 body.put("requesterId", sr.getRequester() != null ? sr.getRequester().getId() : null);
                 body.put("facilityId", sr.getFacility() != null ? sr.getFacility().getId() : null);
                 body.put("submittedAt", sr.getSubmittedAt());
-                if (sr.getPayload() != null) body.put("payload", sr.getPayload());
+                if (sr.getPayload() != null) {
+                    body.put("payload", sr.getPayload());
+                }
             }
 
             restClient.post()
@@ -96,7 +97,9 @@ public class GovSyncOutboxDelegate {
     }
 
     private String truncate(String value, int max) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         return value.length() > max ? value.substring(0, max) : value;
     }
 }

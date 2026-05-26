@@ -1,6 +1,7 @@
 package com.motherhood.journey.maternal.repository;
 
 import com.motherhood.journey.maternal.entity.Mother;
+import com.motherhood.journey.maternal.enums.NidaVerifiedStatus;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -36,5 +37,5 @@ public interface MotherRepository extends JpaRepository<Mother, UUID> {
 
     boolean existsByUserId(@NotNull UUID uuid);
 
-    List<Mother> findByNidaVerifiedStatus(String nidaVerifiedStatus);
+    List<Mother> findByNidaVerifiedStatus(NidaVerifiedStatus nidaVerifiedStatus);
 }

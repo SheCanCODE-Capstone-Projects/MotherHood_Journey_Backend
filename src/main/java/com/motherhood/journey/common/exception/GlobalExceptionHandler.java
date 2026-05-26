@@ -69,7 +69,9 @@ public class GlobalExceptionHandler {
      * before they are reflected into responses or logs, preventing log injection (CWE-117).
      */
     private String sanitize(String input) {
-        if (input == null) return "";
+        if (input == null) {
+            return "";
+        }
         return input.replaceAll("[\r\n]", "").trim();
     }
 }

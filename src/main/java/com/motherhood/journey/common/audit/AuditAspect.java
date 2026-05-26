@@ -76,7 +76,10 @@ public class AuditAspect {
             // Log action — simplified to 3-arg call since extended signature is not defined
             UUID resourceUuid = null;
             if (resourceId != null) {
-                try { resourceUuid = UUID.fromString(resourceId); } catch (IllegalArgumentException ignored) {}
+                try {
+                    resourceUuid = UUID.fromString(resourceId);
+                } catch (IllegalArgumentException ignored) {
+                }
             }
             com.motherhood.journey.common.enums.AuditAction auditAction;
             try {
@@ -96,14 +99,19 @@ public class AuditAspect {
 
     // Extracts the first UUID from method arguments — usually the resource ID
     private String extractResourceId(Object[] args) {
-        if (args == null) return null;
+        if (args == null) {
+            return null;
+        }
         for (Object arg : args) {
-            if (arg instanceof UUID) return arg.toString();
+            if (arg instanceof UUID) {
+                return arg.toString();
+            }
             if (arg instanceof String str) {
                 try {
                     UUID.fromString(str);
                     return str;
-                } catch (IllegalArgumentException ignored) {}
+                } catch (IllegalArgumentException ignored) {
+                }
             }
         }
         return null;

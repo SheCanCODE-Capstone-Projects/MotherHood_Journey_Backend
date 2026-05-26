@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 public class ChildMapper {
 
     public ChildSummaryDTO toSummary(Child child) {
-        if (child == null) return null;
+        if (child == null) {
+            return null;
+        }
         return new ChildSummaryDTO(
             child.getId(),
             child.getFirstName(),

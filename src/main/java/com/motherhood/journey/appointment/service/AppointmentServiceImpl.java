@@ -7,7 +7,6 @@ import com.motherhood.journey.appointment.entity.Appointment;
 import com.motherhood.journey.appointment.enums.AppointmentStatus;
 import com.motherhood.journey.appointment.enums.AppointmentType;
 import com.motherhood.journey.appointment.repository.AppointmentRepository;
-import com.motherhood.journey.child.entity.Child;
 import com.motherhood.journey.child.repository.ChildRepository;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.geo.entity.Facility;
@@ -140,10 +139,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     @FacilityScope
     public AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request) {
         Appointment appointment = findByIdAndFacility(id, facilityId);
-        if (request.scheduledAt() != null)     appointment.setScheduledAt(request.scheduledAt());
-        if (request.appointmentType() != null) appointment.setAppointmentType(AppointmentType.valueOf(request.appointmentType()));
-        if (request.status() != null)          appointment.setStatus(AppointmentStatus.valueOf(request.status()));
-        if (request.notes() != null)          appointment.setNotes(request.notes());
+        if (request.scheduledAt() != null) {
+            appointment.setScheduledAt(request.scheduledAt());
+        }
+        if (request.appointmentType() != null) {
+            appointment.setAppointmentType(AppointmentType.valueOf(request.appointmentType()));
+        }
+        if (request.status() != null) {
+            appointment.setStatus(AppointmentStatus.valueOf(request.status()));
+        }
+        if (request.notes() != null) {
+            appointment.setNotes(request.notes());
+        }
         if (request.healthWorkerId() != null) {
             User hw = userRepository.findById(request.healthWorkerId())
                 .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
@@ -175,10 +182,12 @@ public class AppointmentServiceImpl implements AppointmentService {
             try {
                 Optional<User> recipientOpt = resolvePatientUser(appointment);
                 if (recipientOpt.isEmpty()) {
-                    log.warn("Could not resolve patient user for appointment {}, skipping reminder", appointment.getId());
+                    log.warn("Could not resolve patient user for appointment {}, skipping reminder",
+                        appointment.getId());
                     continue;
                 }
-                String message = "Reminder: You have a " + appointment.getAppointmentType().name().toLowerCase()
+                String message = "Reminder: You have a "
+                        + appointment.getAppointmentType().name().toLowerCase()
                         + " appointment scheduled at " + appointment.getScheduledAt()
                         + " at " + appointment.getFacility().getName() + ".";
                 notificationService.enqueueRaw(recipientOpt.get(), message, NotificationType.APPOINTMENT);

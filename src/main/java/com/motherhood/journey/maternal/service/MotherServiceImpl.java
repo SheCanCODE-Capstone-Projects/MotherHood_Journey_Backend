@@ -116,7 +116,9 @@ public class MotherServiceImpl {
         Mother mother = motherRepository.findById(id)
             .filter(m -> m.getFacility() != null && facilityId.equals(m.getFacility().getId()))
             .orElseThrow(() -> new CustomException("Mother not found", HttpStatus.NOT_FOUND));
-        if (request.educationLevel() != null)    mother.setEducationLevel(request.educationLevel().name());
+        if (request.educationLevel() != null) {
+            mother.setEducationLevel(request.educationLevel().name());
+        }
         auditService.log(AuditAction.UPDATE, "MOTHER", id);
         return MotherResponse.from(mother);
     }
@@ -127,7 +129,9 @@ public class MotherServiceImpl {
         Mother mother = motherRepository.findById(id)
             .filter(m -> m.getFacility() != null && facilityId.equals(m.getFacility().getId()))
             .orElseThrow(() -> new CustomException("Mother not found", HttpStatus.NOT_FOUND));
-        if (mother.getUser() != null) mother.getUser().setActive(false);
+        if (mother.getUser() != null) {
+            mother.getUser().setActive(false);
+        }
         auditService.log(AuditAction.DELETE, "MOTHER", id);
     }
 

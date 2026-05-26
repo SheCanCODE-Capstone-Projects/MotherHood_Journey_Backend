@@ -3,7 +3,6 @@ package com.motherhood.journey.identity.controller;
 import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.identity.dto.request.LoginRequest;
 import com.motherhood.journey.identity.dto.request.RegisterRequest;
-import com.motherhood.journey.identity.dto.response.AuthResponse;
 import com.motherhood.journey.identity.dto.response.TokenResponse;
 import com.motherhood.journey.identity.dto.response.UserResponse;
 import com.motherhood.journey.identity.service.AuthService;
@@ -11,7 +10,10 @@ import com.motherhood.journey.identity.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")

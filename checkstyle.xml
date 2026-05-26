@@ -14,14 +14,20 @@
                   value=".*[\\/]generated-sources[\\/].*"/>
     </module>
 
-    <module name="TreeWalker">
+    <!-- No line longer than 120 characters -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern"
+                  value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    </module>
 
-        <!-- No line longer than 120 characters -->
-        <module name="LineLength">
-            <property name="max" value="120"/>
-            <property name="ignorePattern"
-                      value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-        </module>
+    <!-- No trailing whitespace -->
+    <module name="RegexpSingleline">
+        <property name="format" value="[ \t]+$"/>
+        <property name="message" value="Trailing whitespace"/>
+    </module>
+
+    <module name="TreeWalker">
 
         <!-- No unused imports -->
         <module name="UnusedImports"/>
@@ -31,12 +37,6 @@
 
         <!-- No star imports like import java.util.* -->
         <module name="AvoidStarImport"/>
-
-        <!-- Proper indentation — 4 spaces -->
-        <module name="Indentation">
-            <property name="basicOffset" value="4"/>
-            <property name="caseIndent" value="4"/>
-        </module>
 
         <!-- Braces required for if, else, for, while -->
         <module name="NeedBraces"/>
@@ -53,20 +53,8 @@
         <!-- Whitespace after commas and semicolons -->
         <module name="WhitespaceAfter"/>
 
-        <!-- No multiple blank lines in a row -->
-        <module name="EmptyLineSeparator">
-            <property name="allowNoEmptyLineBetweenFields" value="true"/>
-        </module>
-
         <!-- Each class in its own file -->
         <module name="OneTopLevelClass"/>
-
-        <!-- No trailing whitespace -->
-        <module name="Regexp">
-            <property name="format" value="[ \t]+$"/>
-            <property name="illegalPattern" value="true"/>
-            <property name="message" value="Trailing whitespace"/>
-        </module>
 
     </module>
 

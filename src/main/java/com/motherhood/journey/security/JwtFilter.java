@@ -5,7 +5,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
@@ -68,10 +67,14 @@ public class JwtFilter extends OncePerRequestFilter {
         Cache cache = cacheManager.getCache("userDetails");
         if (cache != null) {
             UserDetails cached = cache.get(phoneNumber, UserDetails.class);
-            if (cached != null) return cached;
+            if (cached != null) {
+                return cached;
+            }
         }
         UserDetails loaded = userDetailsService.loadUserByUsername(phoneNumber);
-        if (cache != null) cache.put(phoneNumber, loaded);
+        if (cache != null) {
+            cache.put(phoneNumber, loaded);
+        }
         return loaded;
     }
 

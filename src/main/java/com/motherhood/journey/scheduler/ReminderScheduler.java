@@ -47,7 +47,9 @@ public class ReminderScheduler {
     @Transactional
     public void processQueuedNotifications() {
         List<SmsNotification> due = notificationRepository.findDueNotifications(LocalDateTime.now());
-        if (due.isEmpty()) return;
+        if (due.isEmpty()) {
+            return;
+        }
 
         log.info("ReminderScheduler: processing {} due notification(s)", due.size());
 
@@ -63,9 +65,11 @@ public class ReminderScheduler {
                 notification.setRetryCount(retries);
                 if (retries >= MAX_RETRIES) {
                     notification.setStatus("FAILED");
-                    log.error("Notification {} FAILED after {} retries: {}", notification.getId(), retries, e.getMessage(), e);
+                    log.error("Notification {} FAILED after {} retries: {}",
+                        notification.getId(), retries, e.getMessage(), e);
                 } else {
-                    log.warn("Notification {} retry {}/{}: {}", notification.getId(), retries, MAX_RETRIES, e.getMessage());
+                    log.warn("Notification {} retry {}/{}: {}",
+                        notification.getId(), retries, MAX_RETRIES, e.getMessage());
                 }
             }
         }

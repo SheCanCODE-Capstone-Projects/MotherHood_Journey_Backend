@@ -202,7 +202,7 @@ Full request/response documentation: [docs/API_DOCUMENTATION.md](docs/API_DOCUME
 │  AuditAspect (every PHI access logged)                   │
 │  GovSyncService outbox (NIDA · HMIS · Irembo)            │
 └───────────────────────┬──────────────────────────────────┘
-                        │ JDBC / Flyway V1–V11
+                        │ JDBC / Flyway V1–V12
 ┌───────────────────────▼──────────────────────────────────┐
 │  PostgreSQL 16                                           │
 │  16 tables · geo_locations (14,000+ Rwanda rows)         │
@@ -239,6 +239,7 @@ Flyway manages all schema changes. Never use `spring.jpa.hibernate.ddl-auto: cre
 | V9 | ICD-10 / HMIS code seed data |
 | V10 | Cancellation reason on appointments |
 | V11 | GovSyncLog missing columns |
+| V12 | `seq_mother_health_id` sequence for health ID generation |
 
 Rwanda geo-location hierarchy (5 provinces → 30 districts → 416 sectors → 2,148 cells → ~14,000
 villages) is seeded in V1. Never duplicate geo data — always join to `geo_locations`.
@@ -270,14 +271,16 @@ Connected systems:
 
 ## Known Issues
 
-See [docs/BUGS_AND_FIXES.md](docs/BUGS_AND_FIXES.md) for root cause analysis and exact code fixes.
+All previously documented bugs have been fixed as of 2026-05-25. See [docs/BUGS_AND_FIXES.md](docs/BUGS_AND_FIXES.md)
+for root cause analysis and the exact code changes applied.
 
-| # | Severity | Endpoint | Issue |
-|---|----------|----------|-------|
-| 1 | 🔴 Critical | `POST /api/v1/mothers` | `seq_mother_health_id` sequence missing from Flyway |
-| 2 | 🟡 High | Mothers / Children / Appointments | SecurityConfig URL matchers block MOH_ADMIN and DISTRICT_OFFICER |
-| 3 | 🔴 Critical | `GET /api/v1/mothers/{id}` | LazyInitializationException in `MotherService.enforceScope()` |
-| 4 | 🔴 Critical | `GET /api/v1/admin/dashboard` | `countByStatus(String)` type mismatch with AppointmentStatus enum |
+| # | Severity | Endpoint | Issue | Status |
+|---|----------|----------|-------|--------|
+| 1 | 🔴 Critical | `POST /api/v1/mothers` | `seq_mother_health_id` sequence missing from Flyway | ✅ Fixed — V12 migration |
+| 2 | 🟡 High | Mothers / Children / Appointments | SecurityConfig URL matchers blocked MOH_ADMIN | ✅ Fixed |
+| 3 | 🔴 Critical | `GET /api/v1/mothers/{id}` | LazyInitializationException in `enforceScope()` | ✅ Fixed |
+| 4 | 🔴 Critical | `GET /api/v1/admin/dashboard` | `countByStatus(String)` enum type mismatch | ✅ Fixed |
+| 5 | 🔴 Critical | `GET /api/v1/mothers/pending-nida` | `findByNidaVerifiedStatus(String)` enum type mismatch | ✅ Fixed |
 
 ---
 

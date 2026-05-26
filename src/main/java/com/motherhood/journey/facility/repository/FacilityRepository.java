@@ -24,7 +24,8 @@ public interface FacilityRepository extends JpaRepository<Facility, UUID> {
     Page<Facility> findByFacilityTypeAndActiveTrue(FacilityType facilityType, Pageable pageable);
 
     @EntityGraph(attributePaths = "geoLocation")
-    Page<Facility> findByDistrictAndFacilityTypeAndActiveTrue(String district, FacilityType facilityType, Pageable pageable);
+    Page<Facility> findByDistrictAndFacilityTypeAndActiveTrue(
+        String district, FacilityType facilityType, Pageable pageable);
 
     Optional<Facility> findByFacilityCode(String facilityCode);
 }

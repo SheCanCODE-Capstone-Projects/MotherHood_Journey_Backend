@@ -4,6 +4,7 @@ import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.enums.UserRole;
+import com.motherhood.journey.identity.repository.UserRepository;
 import com.motherhood.journey.maternal.dto.request.CreatedMotherRequest;
 import com.motherhood.journey.maternal.dto.response.MotherResponse;
 import com.motherhood.journey.maternal.dto.response.MotherSummaryResponse;
@@ -26,6 +27,7 @@ public class MotherService {
     private final MotherRepository motherRepository;
     private final NidaVerificationService nidaVerificationService;
     private final EntityManager entityManager;
+    private final UserRepository userRepository;
 
     @Transactional
     public MotherResponse registerMother(CreatedMotherRequest request) {
@@ -64,13 +66,17 @@ public class MotherService {
     public MotherResponse getMotherById(UUID id, User caller) {
         Mother mother = motherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mother not found: " + id));
-        enforceScope(mother, caller);
+        // Re-fetch caller in this transaction to avoid LazyInitializationException on the
+        // facility proxy — the caller was loaded in a separate Hibernate session by JwtFilter.
+        User freshCaller = userRepository.findById(caller.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Caller not found: " + caller.getId()));
+        enforceScope(mother, freshCaller);
         return MotherResponse.from(mother);
     }
 
     @Transactional(readOnly = true)
     public List<MotherSummaryResponse> getPendingNidaVerification() {
-        return motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING.name())
+        return motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING)
                 .stream()
                 .map(MotherSummaryResponse::from)
                 .toList();

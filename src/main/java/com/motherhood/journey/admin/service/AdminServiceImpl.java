@@ -1,6 +1,7 @@
 package com.motherhood.journey.admin.service;
 
 import com.motherhood.journey.admin.dto.response.AdminDashboardResponse;
+import com.motherhood.journey.appointment.enums.AppointmentStatus;
 import com.motherhood.journey.appointment.repository.AppointmentRepository;
 import com.motherhood.journey.child.repository.VaccinationRecordRepository;
 import com.motherhood.journey.common.exception.CustomException;
@@ -54,7 +55,7 @@ public class AdminServiceImpl implements AdminService {
             motherRepository.count(),
             childRepository.count(),
             userRepository.count(),
-            appointmentRepository.countByStatus("SCHEDULED"),
+            appointmentRepository.countByStatus(AppointmentStatus.SCHEDULED),
             vaccinationRecordRepository.countByStatus("PENDING"),
             pregnancyRepository.countByStatus("ACTIVE")
         );

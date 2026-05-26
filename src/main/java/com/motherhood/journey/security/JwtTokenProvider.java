@@ -1,7 +1,12 @@
 package com.motherhood.journey.security;
-import com.motherhood.journey.identity.enums.GovRole;
 import com.motherhood.journey.identity.entity.User;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
@@ -69,15 +74,17 @@ public class JwtTokenProvider {
         try {
             parseClaims(token);
             return true;
-        } catch (ExpiredJwtException e)
-        { log.warn("JWT expired: {}", e.getMessage()); }
-        catch (UnsupportedJwtException e)
-        { log.warn("Unsupported JWT: {}", e.getMessage()); }
-        catch (MalformedJwtException e)
-        { log.warn("Malformed JWT: {}", e.getMessage()); }
-        catch (SecurityException e)
-        { log.warn("Invalid JWT signature: {}", e.getMessage()); }
-        catch (IllegalArgumentException e) { log.warn("Empty JWT claims: {}", e.getMessage()); }
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT expired: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            log.warn("Unsupported JWT: {}", e.getMessage());
+        } catch (MalformedJwtException e) {
+            log.warn("Malformed JWT: {}", e.getMessage());
+        } catch (SecurityException e) {
+            log.warn("Invalid JWT signature: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.warn("Empty JWT claims: {}", e.getMessage());
+        }
         return false;
     }
 
@@ -103,7 +110,9 @@ public class JwtTokenProvider {
     @SuppressWarnings("unchecked")
     public List<UUID> getGeoScopeIds(String token) {
         Object raw = parseClaims(token).get(JwtClaims.GEO_SCOPE_IDS);
-        if (raw == null) return List.of();
+        if (raw == null) {
+            return List.of();
+        }
         return ((List<String>) raw).stream().map(UUID::fromString).toList();
     }
 

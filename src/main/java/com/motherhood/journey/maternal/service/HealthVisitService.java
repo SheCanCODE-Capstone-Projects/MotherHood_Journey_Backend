@@ -13,6 +13,7 @@ public interface HealthVisitService {
     HealthVisitResponse createVisit(CreateHealthVisitRequest request);
     HealthVisitResponse getVisitById(UUID id, UUID facilityId);
     Page<HealthVisitResponse> getVisitsByFacility(UUID facilityId, Pageable pageable);
-    Page<HealthVisitResponse> getVisitsByPatient(UUID patientRefId, PatientType patientType, UUID facilityId, Pageable pageable);
+    Page<HealthVisitResponse> getVisitsByPatient(
+        UUID patientRefId, PatientType patientType, UUID facilityId, Pageable pageable);
     HealthVisitResponse updateVisit(UUID id, UUID facilityId, UpdateHealthVisitRequest request);
 }

@@ -54,7 +54,9 @@ public class Icd10CodeValidator implements ConstraintValidator<Icd10Code, String
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
-        if (value == null || value.isBlank()) return false;
+        if (value == null || value.isBlank()) {
+            return false;
+        }
         // Normalise: trim and uppercase, strip trailing decimal (e.g. O14.1 → O14)
         String normalised = value.trim().toUpperCase().replaceAll("\\..*", "");
         return MOH_HMIS_CODES.contains(normalised);

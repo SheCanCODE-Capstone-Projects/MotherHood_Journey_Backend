@@ -2,6 +2,7 @@
 
 > **Reference:** `docs/motherhood-journey-sprint-plan.md` (9 engineers · 5 sprints · 313 pts)  
 > **Assessed:** 2026-05-25 against live codebase and endpoint tests  
+> **Updated:** 2026-05-25 — all Priority 0 bugs applied and verified (77/77 tests pass)  
 > **Legend:** ✅ Done · ⚠️ Partial · ❌ Not started
 
 ---
@@ -18,16 +19,21 @@
 
 ---
 
-## Priority 0 — Critical Bug Fixes (Do First)
+## Priority 0 — Critical Bug Fixes ✅ All Applied
 
-These block other tasks. See `docs/BUGS_AND_FIXES.md` for full code changes.
+All four critical bugs and four secondary issues have been fixed. See `docs/BUGS_AND_FIXES.md`
+for root cause analysis and exact code changes. `./mvnw test` reports 77/77 tests passing.
 
-| # | Bug | File | Effort |
-|---|-----|------|--------|
-| B-1 | `POST /api/v1/mothers` → 500 (missing `seq_mother_health_id` sequence) | Add `V12__add_mother_health_id_sequence.sql` | 15 min |
-| B-2 | `SecurityConfig` blocks MOH_ADMIN / DISTRICT_OFFICER from mothers, children, appointments | `SecurityConfig.java` lines 50–55 | 15 min |
-| B-3 | `GET /api/v1/mothers/{id}` → 500 (LazyInitializationException in `enforceScope`) | `MotherService.java` | 30 min |
-| B-4 | `GET /api/v1/admin/dashboard` → 500 (`countByStatus(String)` enum type mismatch) | `AppointmentRepository.java`, `AdminServiceImpl.java` | 20 min |
+| # | Bug | Status |
+|---|-----|--------|
+| B-1 | `POST /api/v1/mothers` → 500 (missing `seq_mother_health_id` sequence) | ✅ Fixed — V12 migration added |
+| B-2 | `SecurityConfig` blocks MOH_ADMIN / DISTRICT_OFFICER | ✅ Fixed — matchers widened to `.authenticated()` |
+| B-3 | `GET /api/v1/mothers/{id}` → 500 (LazyInitializationException) | ✅ Fixed — caller re-fetched in transaction |
+| B-4 | `GET /api/v1/admin/dashboard` → 500 (`countByStatus` type mismatch) | ✅ Fixed — enum parameter type corrected |
+| B-5 | `GET /api/v1/mothers/pending-nida` → 500 (same type mismatch for NidaVerifiedStatus) | ✅ Fixed — same pattern applied |
+| B-6 | Test suite fails under Java 21+ (Mockito inline mocking blocked) | ✅ Fixed — subclass mock maker configured |
+| B-7 | VaccinationServiceTest in wrong directory / stale API | ✅ Fixed — moved and rewritten |
+| B-8 | Duplicate `@Query` import in UserRepository | ✅ Fixed — removed |
 
 ---
 

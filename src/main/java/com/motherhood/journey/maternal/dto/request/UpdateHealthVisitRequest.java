@@ -1,7 +1,12 @@
 package com.motherhood.journey.maternal.dto.request;
 
 import com.motherhood.journey.maternal.enums.VisitType;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 

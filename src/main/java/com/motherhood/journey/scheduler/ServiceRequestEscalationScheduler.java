@@ -58,7 +58,9 @@ public class ServiceRequestEscalationScheduler {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(escalationHours);
         List<ServiceRequest> stale = serviceRequestRepository.findStalePendingBefore(cutoff);
 
-        if (stale.isEmpty()) return;
+        if (stale.isEmpty()) {
+            return;
+        }
 
         log.warn("EscalationScheduler: escalating {} stale PENDING request(s) older than {}h",
             stale.size(), escalationHours);

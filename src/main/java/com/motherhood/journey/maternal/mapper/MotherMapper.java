@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 public class MotherMapper {
 
     public MotherDTO toDTO(Mother mother) {
-        if (mother == null) return null;
+        if (mother == null) {
+            return null;
+        }
         return new MotherDTO(
             mother.getId(),
             mother.getUser() != null ? mother.getUser().getId() : null,
@@ -24,7 +26,9 @@ public class MotherMapper {
     }
 
     public MotherSummaryDTO toSummary(Mother mother) {
-        if (mother == null) return null;
+        if (mother == null) {
+            return null;
+        }
         return new MotherSummaryDTO(
             mother.getId(),
             mother.getHealthId(),
