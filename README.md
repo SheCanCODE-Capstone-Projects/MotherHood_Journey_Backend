@@ -205,7 +205,7 @@ Full request/response documentation: [docs/API_DOCUMENTATION.md](docs/API_DOCUME
 │  AuditAspect (every PHI access logged)                   │
 │  GovSyncService outbox (NIDA · HMIS · Irembo)            │
 └───────────────────────┬──────────────────────────────────┘
-                        │ JDBC / Flyway V1–V11
+                        │ JDBC / Flyway V1–V12
 ┌───────────────────────▼──────────────────────────────────┐
 │  PostgreSQL 16                                           │
 │  16 tables · geo_locations (14,000+ Rwanda rows)         │
@@ -242,6 +242,7 @@ Flyway manages all schema changes. Never use `spring.jpa.hibernate.ddl-auto: cre
 | V9 | ICD-10 / HMIS code seed data |
 | V10 | Cancellation reason on appointments |
 | V11 | GovSyncLog missing columns |
+| V12 | `seq_mother_health_id` sequence for health ID generation |
 
 Rwanda geo-location hierarchy (5 provinces → 30 districts → 416 sectors → 2,148 cells → ~14,000
 villages) is seeded in V1. Never duplicate geo data — always join to `geo_locations`.

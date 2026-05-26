@@ -7,7 +7,6 @@ import com.motherhood.journey.appointment.entity.Appointment;
 import com.motherhood.journey.appointment.enums.AppointmentStatus;
 import com.motherhood.journey.appointment.enums.AppointmentType;
 import com.motherhood.journey.appointment.repository.AppointmentRepository;
-import com.motherhood.journey.child.entity.Child;
 import com.motherhood.journey.child.repository.ChildRepository;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.geo.entity.Facility;
@@ -182,7 +181,8 @@ public class AppointmentServiceImpl implements AppointmentService {
             try {
                 Optional<User> recipientOpt = resolvePatientUser(appointment);
                 if (recipientOpt.isEmpty()) {
-                    log.warn("Could not resolve patient user for appointment {}, skipping reminder", appointment.getId());
+                    log.warn("Could not resolve patient user for appointment {}, skipping reminder",
+                        appointment.getId());
                     continue;
                 }
                 User patient = recipientOpt.get();

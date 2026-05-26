@@ -97,11 +97,21 @@ public class FacilityServiceImpl implements FacilityService {
     public FacilityResponse updateFacility(UUID id, UpdateFacilityRequest request) {
         assertFacilityOwnership(id);
         Facility facility = findById(id);
-        if (request.name() != null)         facility.setName(request.name());
-        if (request.facilityType() != null) facility.setFacilityType(parseFacilityType(request.facilityType()));
-        if (request.district() != null)     facility.setDistrict(request.district());
-        if (request.phone() != null)        facility.setPhone(request.phone());
-        if (request.active() != null)       facility.setActive(request.active());
+        if (request.name() != null) {
+            facility.setName(request.name());
+        }
+        if (request.facilityType() != null) {
+            facility.setFacilityType(parseFacilityType(request.facilityType()));
+        }
+        if (request.district() != null) {
+            facility.setDistrict(request.district());
+        }
+        if (request.phone() != null) {
+            facility.setPhone(request.phone());
+        }
+        if (request.active() != null) {
+            facility.setActive(request.active());
+        }
         return FacilityResponse.from(facility);
     }
 
@@ -128,7 +138,9 @@ public class FacilityServiceImpl implements FacilityService {
         boolean isCrossFacility = auth.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(CROSS_FACILITY_ROLES::contains);
-        if (isCrossFacility) return;
+        if (isCrossFacility) {
+            return;
+        }
         UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd ? fd.facilityId() : null;
         if (jwtFacilityId == null || !jwtFacilityId.equals(facilityId)) {
             throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);

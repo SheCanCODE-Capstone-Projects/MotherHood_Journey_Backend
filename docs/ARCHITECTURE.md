@@ -154,6 +154,7 @@ Full schema with column definitions and indexes: [`docs/DATABASE_DESIGN.md`](DAT
 | V9 | ICD-10 / HMIS code seed data |
 | V10 | Cancellation reason on appointments |
 | V11 | `gov_sync_log` missing columns |
+| V12 | `seq_mother_health_id` sequence for `MH-YYYY-NNNNNN` health ID generation |
 
 ---
 

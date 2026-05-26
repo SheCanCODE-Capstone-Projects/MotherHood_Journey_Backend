@@ -20,14 +20,20 @@ public class FacilitySecurityService {
      * All other roles must have a JWT facilityId that exactly matches the requested facilityId.
      */
     public boolean hasAccessToFacility(Authentication authentication, UUID facilityId) {
-        if (authentication == null || !authentication.isAuthenticated()) return false;
-        if (facilityId == null) return false;
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        if (facilityId == null) {
+            return false;
+        }
 
         // Cross-facility roles bypass the check
         boolean isCrossFacilityRole = authentication.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(CROSS_FACILITY_ROLES::contains);
-        if (isCrossFacilityRole) return true;
+        if (isCrossFacilityRole) {
+            return true;
+        }
 
         Object details = authentication.getDetails();
         if (details instanceof FacilityAuthDetails facilityDetails) {

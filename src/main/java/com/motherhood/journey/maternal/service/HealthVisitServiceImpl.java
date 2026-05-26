@@ -119,15 +119,33 @@ public class HealthVisitServiceImpl implements HealthVisitService {
     @FacilityScope
     public HealthVisitResponse updateVisit(UUID id, UUID facilityId, UpdateHealthVisitRequest request) {
         HealthVisit visit = findByIdAndFacility(id, facilityId);
-        if (request.visitDatetime() != null)  visit.setVisitDatetime(request.visitDatetime());
-        if (request.visitType() != null)      visit.setVisitType(request.visitType());
-        if (request.chiefComplaint() != null) visit.setChiefComplaint(request.chiefComplaint());
-        if (request.weightKg() != null)       visit.setWeightKg(request.weightKg());
-        if (request.heightCm() != null)       visit.setHeightCm(request.heightCm());
-        if (request.systolicBp() != null)     visit.setSystolicBp(request.systolicBp());
-        if (request.diastolicBp() != null)    visit.setDiastolicBp(request.diastolicBp());
-        if (request.muacCm() != null)         visit.setMuacCm(request.muacCm());
-        if (request.notes() != null)          visit.setNotes(request.notes());
+        if (request.visitDatetime() != null) {
+            visit.setVisitDatetime(request.visitDatetime());
+        }
+        if (request.visitType() != null) {
+            visit.setVisitType(request.visitType());
+        }
+        if (request.chiefComplaint() != null) {
+            visit.setChiefComplaint(request.chiefComplaint());
+        }
+        if (request.weightKg() != null) {
+            visit.setWeightKg(request.weightKg());
+        }
+        if (request.heightCm() != null) {
+            visit.setHeightCm(request.heightCm());
+        }
+        if (request.systolicBp() != null) {
+            visit.setSystolicBp(request.systolicBp());
+        }
+        if (request.diastolicBp() != null) {
+            visit.setDiastolicBp(request.diastolicBp());
+        }
+        if (request.muacCm() != null) {
+            visit.setMuacCm(request.muacCm());
+        }
+        if (request.notes() != null) {
+            visit.setNotes(request.notes());
+        }
         auditService.log(AuditAction.UPDATE, "HEALTH_VISIT", id);
         return HealthVisitResponse.from(
             visit,
@@ -143,7 +161,9 @@ public class HealthVisitServiceImpl implements HealthVisitService {
         boolean isCrossFacility = auth.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(CROSS_FACILITY_ROLES::contains);
-        if (isCrossFacility) return;
+        if (isCrossFacility) {
+            return;
+        }
         UUID jwtFacilityId = auth.getDetails() instanceof FacilityAuthDetails fd
             ? fd.facilityId() : null;
         if (jwtFacilityId == null || !jwtFacilityId.equals(requestFacilityId)) {
@@ -162,7 +182,9 @@ public class HealthVisitServiceImpl implements HealthVisitService {
     }
 
     private GeoLocation resolveGeoLocation(UUID geoLocationId) {
-        if (geoLocationId == null) return null;
+        if (geoLocationId == null) {
+            return null;
+        }
         return geoRepository.findById(geoLocationId)
             .orElseThrow(() -> new CustomException("GeoLocation not found", HttpStatus.NOT_FOUND));
     }
@@ -188,7 +210,9 @@ public class HealthVisitServiceImpl implements HealthVisitService {
     }
 
     private List<Diagnosis> persistDiagnoses(HealthVisit visit, List<DiagnosisRequest> diagReqs) {
-        if (diagReqs == null || diagReqs.isEmpty()) return List.of();
+        if (diagReqs == null || diagReqs.isEmpty()) {
+            return List.of();
+        }
         List<Diagnosis> entities = diagReqs.stream()
             .map(d -> Diagnosis.builder()
                 .visit(visit)
@@ -204,7 +228,9 @@ public class HealthVisitServiceImpl implements HealthVisitService {
     }
 
     private List<Prescription> persistPrescriptions(HealthVisit visit, List<PrescriptionRequest> rxReqs) {
-        if (rxReqs == null || rxReqs.isEmpty()) return List.of();
+        if (rxReqs == null || rxReqs.isEmpty()) {
+            return List.of();
+        }
         return prescriptionRepository.saveAll(rxReqs.stream()
             .map(p -> Prescription.builder()
                 .visit(visit)

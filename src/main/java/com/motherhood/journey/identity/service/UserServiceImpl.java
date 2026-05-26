@@ -82,9 +82,15 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateUser(UUID id, UpdateUserRequest request) {
         User user = findById(id);
-        if (request.firstName() != null) user.setFirstName(request.firstName());
-        if (request.lastName() != null) user.setLastName(request.lastName());
-        if (request.preferredLanguage() != null) user.setPreferredLanguage(request.preferredLanguage());
+        if (request.firstName() != null) {
+            user.setFirstName(request.firstName());
+        }
+        if (request.lastName() != null) {
+            user.setLastName(request.lastName());
+        }
+        if (request.preferredLanguage() != null) {
+            user.setPreferredLanguage(request.preferredLanguage());
+        }
         // If the user is being deactivated, evict from cache immediately
         if (request.active() != null && !request.active()) {
             user.setActive(false);

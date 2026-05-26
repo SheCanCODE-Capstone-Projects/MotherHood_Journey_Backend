@@ -69,13 +69,13 @@ public class MotherService {
     public MotherResponse getMotherById(UUID id, User caller) {
         Mother mother = motherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mother not found: " + id));
-
-        // Re-load caller within this transaction so lazy associations
-        // (facility, geoLocation) are reachable from an open Hibernate session.
-        // The principal handed in by @AuthenticationPrincipal originated from
-        // the JwtFilter's cached UserDetails — its session is long closed.
+        // Re-fetch caller in this transaction to avoid LazyInitializationException on the
+        // facility/geoLocation proxies — the caller was loaded in a separate Hibernate
+        // session by JwtFilter and is detached by the time we reach this method.
         User freshCaller = userRepository.findById(caller.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Caller not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Caller not found: " + caller.getId()));
+        // Preserve the JWT-derived geo scope on the freshly loaded entity so the
+        // district-officer check below sees the same list the JwtFilter populated.
         freshCaller.setScopedGeoIds(caller.getScopedGeoIds());
 
         enforceScope(mother, freshCaller);
@@ -84,7 +84,7 @@ public class MotherService {
 
     @Transactional(readOnly = true)
     public List<MotherSummaryResponse> getPendingNidaVerification() {
-        return motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING.name())
+        return motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING)
                 .stream()
                 .map(MotherSummaryResponse::from)
                 .toList();

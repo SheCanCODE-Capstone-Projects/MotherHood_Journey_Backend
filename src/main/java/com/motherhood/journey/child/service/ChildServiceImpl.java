@@ -157,9 +157,15 @@ public class ChildServiceImpl implements ChildService {
     public ChildResponse updateChild(UUID id, UUID facilityId, UpdateChildRequest request) {
         Child child = childRepository.findByIdAndFacility_Id(id, facilityId)
             .orElseThrow(() -> new CustomException("Child not found", HttpStatus.NOT_FOUND));
-        if (request.firstName() != null)          child.setFirstName(request.firstName());
-        if (request.birthCertificateNo() != null) child.setBirthCertificateNo(request.birthCertificateNo());
-        if (request.healthStatus() != null)       child.setHealthStatus(request.healthStatus());
+        if (request.firstName() != null) {
+            child.setFirstName(request.firstName());
+        }
+        if (request.birthCertificateNo() != null) {
+            child.setBirthCertificateNo(request.birthCertificateNo());
+        }
+        if (request.healthStatus() != null) {
+            child.setHealthStatus(request.healthStatus());
+        }
         auditService.log(AuditAction.UPDATE, "CHILD", id);
         return toResponse(child);
     }

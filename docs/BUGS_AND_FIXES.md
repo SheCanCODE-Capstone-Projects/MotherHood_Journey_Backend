@@ -1,19 +1,20 @@
 # MotherHood Journey — Known Bugs & Required Fixes
 
-> **Status as of:** 2026-05-25  
-> **Found during:** Full live endpoint test against the running application  
+> **Status as of:** 2026-05-25 (initial discovery) / **Fixes applied:** 2026-05-25
+> **Found during:** Full live endpoint test against the running application
 > **Severity codes:** 🔴 Critical (endpoint broken) · 🟡 High (security gap) · 🟠 Medium (data integrity) · 🔵 Low (polish)
+> **Legend:** ✅ Fixed · 🔧 Documented (fix not yet applied)
 
 ---
 
-## Bug #1 — Admin Dashboard 500 Error 🔴 Critical
+## Bug #1 — Admin Dashboard 500 Error 🔴 Critical ✅ Fixed
 
-**Endpoint:** `GET /api/v1/admin/dashboard`  
+**Endpoint:** `GET /api/v1/admin/dashboard`
 **Symptom:** Returns HTTP 500 on every request.
 
 ### Root Cause
 
-`AdminServiceImpl.getDashboard()` calls `appointmentRepository.countByStatus("SCHEDULED")`,
+`AdminServiceImpl.getDashboard()` called `appointmentRepository.countByStatus("SCHEDULED")`,
 passing a `String` where the entity field is an `AppointmentStatus` **enum** annotated
 with `@Enumerated(EnumType.STRING)`.
 
@@ -25,65 +26,51 @@ an enum type when binding query parameters. It expects the exact enum type. This
 
 | File | Problem |
 |------|---------|
-| `appointment/repository/AppointmentRepository.java:27` | `countByStatus(String status)` — wrong parameter type |
-| `admin/service/AdminServiceImpl.java:57` | Calls `countByStatus("SCHEDULED")` with a String literal |
+| `appointment/repository/AppointmentRepository.java` | `countByStatus(String status)` — wrong parameter type |
+| `appointment/repository/AppointmentRepository.java` | `findByFacility_IdAndStatus(UUID, String)` — same issue |
+| `admin/service/AdminServiceImpl.java` | Calls `countByStatus("SCHEDULED")` with a String literal |
 
-### Fix
+### Fix Applied
 
-**Step 1 — Change the repository method signature**
-
+**`AppointmentRepository.java`** — changed parameter types to `AppointmentStatus` enum:
 ```java
-// appointment/repository/AppointmentRepository.java
-
-// Before (line 27):
+// Before:
 long countByStatus(String status);
+List<Appointment> findByFacility_IdAndStatus(UUID facilityId, String status);
 
 // After:
 long countByStatus(AppointmentStatus status);
+List<Appointment> findByFacility_IdAndStatus(UUID facilityId, AppointmentStatus status);
 ```
 
-Add the import at the top of `AppointmentRepository.java`:
-
+**`AdminServiceImpl.java`** —
+changed call site to use enum constant:
 ```java
-import com.motherhood.journey.appointment.enums.AppointmentStatus;
-```
-
-**Step 2 — Update the call site in AdminServiceImpl**
-
-```java
-// admin/service/AdminServiceImpl.java  getDashboard() method
-
-// Before (line 57):
+// Before:
 appointmentRepository.countByStatus("SCHEDULED"),
 
 // After:
 appointmentRepository.countByStatus(AppointmentStatus.SCHEDULED),
 ```
 
-Add the import:
-
-```java
-import com.motherhood.journey.appointment.enums.AppointmentStatus;
-```
-
-**Verification:** `GET /api/v1/admin/dashboard` with a `MOH_ADMIN` token should return 200 with all seven counters.
+**Verification:** `GET /api/v1/admin/dashboard` with a `MOH_ADMIN` token returns 200 with all seven counters.
 
 ---
 
-## Bug #2 — SecurityConfig Blocks MOH_ADMIN and DISTRICT_OFFICER 🟡 High
+## Bug #2 — SecurityConfig Blocks MOH_ADMIN and DISTRICT_OFFICER 🟡 High ✅ Fixed
 
-**Affected endpoints:** `GET /api/v1/mothers/**`, `GET /api/v1/children/**`, `GET /api/v1/appointments/**`  
+**Affected endpoints:** `GET /api/v1/mothers/**`, `GET /api/v1/children/**`, `GET /api/v1/appointments/**`
 **Symptom:** `MOH_ADMIN`, `DISTRICT_OFFICER`, and `GOVERNMENT_ANALYST` tokens receive HTTP 403 even though the controller `@PreAuthorize` annotations explicitly allow them.
 
 ### Root Cause
 
-`SecurityConfig.java` (lines 50–55) enforces URL-level `requestMatchers` that run **before**
-`@PreAuthorize` annotations. These matchers restrict the paths to a narrower role set than the
-controller allows, so cross-facility roles are rejected at the URL layer and never reach the
+`SecurityConfig.java` enforced URL-level `requestMatchers` that run **before**
+`@PreAuthorize` annotations. These matchers restricted the paths to a narrower role set than the
+controller allows, so cross-facility roles were rejected at the URL layer and never reached the
 method-level annotation.
 
 ```java
-// Current (too restrictive):
+// Before (too restrictive):
 .requestMatchers("/api/v1/mothers/**")
     .hasAnyRole(UserRole.HEALTH_WORKER.name(), UserRole.FACILITY_ADMIN.name())
 .requestMatchers("/api/v1/children/**")
@@ -92,60 +79,31 @@ method-level annotation.
     .hasAnyRole(UserRole.HEALTH_WORKER.name(), UserRole.FACILITY_ADMIN.name(), UserRole.PATIENT.name())
 ```
 
-### Affected File
+### Fix Applied
 
-`config/SecurityConfig.java` — lines 50–55
-
-### Fix
-
-Replace the three over-restrictive matchers with `authenticated()` (the fine-grained per-endpoint
-role checks are already handled by `@PreAuthorize` on each controller method):
-
+**`config/SecurityConfig.java`** — replaced the three over-restrictive matchers with `.authenticated()`:
 ```java
-// config/SecurityConfig.java — inside filterChain(), replace lines 50–55 with:
-
+// After — fine-grained per-endpoint role checks handled by @PreAuthorize:
 .requestMatchers("/api/v1/mothers/**").authenticated()
 .requestMatchers("/api/v1/children/**").authenticated()
 .requestMatchers("/api/v1/appointments/**").authenticated()
 ```
 
-The full `authorizeHttpRequests` block after the fix should look like:
-
-```java
-.authorizeHttpRequests(auth -> auth
-    .requestMatchers("/api/v1/geo/**").permitAll()
-    .requestMatchers("/api/v1/auth/**").permitAll()
-    .requestMatchers("/webhooks/at/**").permitAll()
-    .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-    .requestMatchers("/actuator/health").permitAll()
-    .requestMatchers("/api/v1/mothers/**").authenticated()
-    .requestMatchers("/api/v1/children/**").authenticated()
-    .requestMatchers("/api/v1/appointments/**").authenticated()
-    .requestMatchers("/api/v1/reports/**")
-        .hasAnyRole(UserRole.GOVERNMENT_ANALYST.name(), UserRole.MOH_ADMIN.name())
-    .requestMatchers("/api/v1/facilities/**")
-        .hasAnyRole(UserRole.FACILITY_ADMIN.name(), UserRole.MOH_ADMIN.name())
-    .anyRequest().authenticated()
-)
-```
-
-**Verification:** `GET /api/v1/mothers/{id}` with a `MOH_ADMIN` token should proceed past the
-URL filter (Bug #3 below still needs fixing for it to return 200).
+**Verification:** `GET /api/v1/mothers/{id}` with a `MOH_ADMIN` token now proceeds past the URL filter.
 
 ---
 
-## Bug #3 — GET /api/v1/mothers/{id} LazyInitializationException 🔴 Critical
+## Bug #3 — GET /api/v1/mothers/{id} LazyInitializationException 🔴 Critical ✅ Fixed
 
-**Endpoint:** `GET /api/v1/mothers/{id}`  
+**Endpoint:** `GET /api/v1/mothers/{id}`
 **Symptom:** Returns HTTP 500. Root exception is `LazyInitializationException: could not initialize proxy — no Session`.
 
 ### Root Cause
 
-`MotherService.enforceScope()` (line 85) calls `caller.getFacilityId()`, which accesses the
+`MotherService.enforceScope()` called `caller.getFacilityId()`, which accesses the
 `facility` lazy proxy on the `User` entity:
 
 ```java
-// MotherService.java  enforceScope() line 85
 if (!caller.getFacilityId().equals(mother.getFacility().getId())) { ... }
 ```
 
@@ -154,63 +112,33 @@ JWT filter — a separate Hibernate session that is closed long before `getMothe
 Accessing `caller.getFacility()` (lazy proxy) outside an open session throws
 `LazyInitializationException`.
 
-### Affected File
+### Fix Applied
 
-`maternal/service/MotherService.java` — `getMotherById()` (line 64) and `enforceScope()` (line 81)
-
-### Fix
-
-Inject `UserRepository` into `MotherService` and re-fetch the caller within the
-`@Transactional(readOnly = true)` boundary so its lazy associations are accessible.
-
-**Step 1 — Add UserRepository to MotherService**
+**`maternal/service/MotherService.java`** — injected `UserRepository` and re-fetched caller within the `@Transactional` boundary:
 
 ```java
-// maternal/service/MotherService.java
+// Added field:
+private final UserRepository userRepository;
 
-import com.motherhood.journey.identity.repository.UserRepository;
-
-@Service
-@RequiredArgsConstructor
-public class MotherService {
-
-    private final MotherRepository motherRepository;
-    private final NidaVerificationService nidaVerificationService;
-    private final EntityManager entityManager;
-    private final UserRepository userRepository;   // ← add this field
-    
-    // ... existing methods
-}
-```
-
-**Step 2 — Re-fetch caller inside the transactional method**
-
-```java
-// maternal/service/MotherService.java  getMotherById()
-
+// getMotherById() — re-fetch caller in this transaction:
 @Transactional(readOnly = true)
 public MotherResponse getMotherById(UUID id, User caller) {
     Mother mother = motherRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Mother not found: " + id));
-
-    // Re-load caller within this transaction to avoid LazyInitializationException
-    // on the facility proxy set up by CustomUserDetailsService in a separate session.
     User freshCaller = userRepository.findById(caller.getId())
-            .orElseThrow(() -> new IllegalArgumentException("Caller user not found"));
-
+            .orElseThrow(() -> new IllegalArgumentException("Caller not found: " + caller.getId()));
     enforceScope(mother, freshCaller);
     return MotherResponse.from(mother);
 }
 ```
 
-**Verification:** `GET /api/v1/mothers/{id}` with a `HEALTH_WORKER` token at the same facility
-as the mother should return 200 with the mother's details.
+**Verification:** `GET /api/v1/mothers/{id}` with a `HEALTH_WORKER` token at the same facility returns 200.
 
 ---
 
-## Bug #4 — Missing Flyway Migration for `seq_mother_health_id` 🟠 Medium
+## Bug #4 — Missing Flyway Migration for `seq_mother_health_id` 🟠 Medium ✅ Fixed
 
-**Triggered by:** `POST /api/v1/mothers`  
+**Triggered by:** `POST /api/v1/mothers`
 **Symptom:** HTTP 500 on first deployment or fresh database. Error: `ERROR: relation "seq_mother_health_id" does not exist`.
 
 ### Root Cause
@@ -222,18 +150,13 @@ entityManager.createNativeQuery("SELECT nextval('seq_mother_health_id')").getSin
 ```
 
 The sequence `seq_mother_health_id` was never created in any Flyway migration (V1–V11).
-Fresh deployments fail immediately. The workaround of running `CREATE SEQUENCE` manually in
-`psql` is not repeatable across environments.
+Fresh deployments fail immediately.
 
-### Fix
+### Fix Applied
 
-Create a new Flyway migration file:
-
-**File:** `src/main/resources/db/migration/V12__add_mother_health_id_sequence.sql`
+Created **`src/main/resources/db/migration/V12__add_mother_health_id_sequence.sql`**:
 
 ```sql
--- Creates the sequence used by MotherService.generateHealthId()
--- to generate MH-YYYY-NNNNNN health IDs for registered mothers.
 CREATE SEQUENCE IF NOT EXISTS seq_mother_health_id
     START WITH 1
     INCREMENT BY 1
@@ -241,30 +164,131 @@ CREATE SEQUENCE IF NOT EXISTS seq_mother_health_id
     CACHE 1;
 ```
 
-**Important:** Do not modify any existing V1–V11 scripts. Flyway will refuse to start if an
-already-applied migration script is changed. V12 is the correct next version.
-
-**Verification:** On a clean database, `POST /api/v1/mothers` should succeed and return a
+**Verification:** On a clean database, `POST /api/v1/mothers` succeeds and returns a
 `healthId` in the format `MH-YYYY-NNNNNN` (e.g. `MH-2026-000001`).
+
+---
+
+## Bug #5 — MotherRepository.findByNidaVerifiedStatus Type Mismatch 🔴 Critical ✅ Fixed
+
+**Triggered by:** `GET /api/v1/mothers/pending-nida`
+**Symptom:** HTTP 500 at runtime. Hibernate 6 type-binding error.
+
+### Root Cause
+
+`MotherService.getPendingNidaVerification()` called:
+```java
+motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING.name())
+```
+
+`Mother.nidaVerifiedStatus` is `@Enumerated(EnumType.STRING)` with type `NidaVerifiedStatus`.
+`MotherRepository.findByNidaVerifiedStatus(String)` passes a `String` to an enum field —
+the same Hibernate 6 type-binding failure pattern as Bug #1.
+
+### Fix Applied
+
+**`maternal/repository/MotherRepository.java`** — changed method signature:
+```java
+// Before:
+List<Mother> findByNidaVerifiedStatus(String nidaVerifiedStatus);
+
+// After:
+List<Mother> findByNidaVerifiedStatus(NidaVerifiedStatus nidaVerifiedStatus);
+```
+
+**`maternal/service/MotherService.java`** — changed call site:
+```java
+// Before:
+motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING.name())
+
+// After:
+motherRepository.findByNidaVerifiedStatus(NidaVerifiedStatus.PENDING)
+```
+
+**Verification:** `GET /api/v1/mothers/pending-nida` returns the list of mothers with PENDING NIDA status.
+
+---
+
+## Bug #6 — Test Suite Fails Under Java 21+ (Mockito inline mocking) 🔵 Low ✅ Fixed
+
+**Symptom:** `./mvnw test` fails with `MockitoException: Could not modify all classes [java.lang.Object, AuditService]` when run on Java 21+.
+
+### Root Cause
+
+Mockito 5.x defaults to **inline bytecode instrumentation** (byte-buddy retransformation) to mock
+concrete classes. On Java 21+ (and especially Java 25, which this machine uses), the JVM's module
+system blocks retransformation of `java.lang.Object` and other bootstrap classes — a hard JVM
+restriction that `--add-opens` alone cannot bypass.
+
+`AuditService` is a concrete `@Service` class (not an interface), so Mockito tried to use inline
+mocking, triggering the restriction.
+
+### Fix Applied
+
+Created **`src/test/resources/mockito-extensions/org.mockito.plugins.MockMaker`**:
+```
+mock-maker-subclass
+```
+
+This switches Mockito to the **subclass mock maker**, which creates a new subclass of the target
+class rather than retransforming existing classes. No JVM module access is required.
+
+Also added JVM `--add-opens` flags to the Surefire plugin in `pom.xml` as defence-in-depth.
+
+**Verification:** `./mvnw test` reports `Tests run: 77, Failures: 0, Errors: 0, Skipped: 0`.
+
+---
+
+## Bug #7 — VaccinationServiceTest in Wrong Directory 🔵 Low ✅ Fixed
+
+**File:** `src/main/tests/VaccinationServiceTest.java` (wrong location, wrong package, wrong API)
+**Symptom:** Test file is in `src/main/tests/` (not on the test classpath) and references methods that do not exist in the current `VaccinationServiceImpl`.
+
+### Root Cause
+
+The test was written for a `VaccinationService` API (`markAdministered(UUID, MarkAdministeredRequest, UUID)`) that was later replaced by `administer(UUID, UUID, AdministerVaccinationRequest)`. It was placed in `src/main/tests/` instead of `src/test/java/...`, so it was never compiled as a test.
+
+### Fix Applied
+
+- Moved and rewritten to **`src/test/java/com/motherhood/journey/child/service/VaccinationServiceTest.java`**
+- Updated to use the current `VaccinationServiceImpl` API (tests cover `markOverdueAndNotify`)
+- Fixed ambiguous `notificationService.enqueue(any())` → `enqueue(any(VaccinationRecord.class))`
+
+---
+
+## Bug #8 — UserRepository Duplicate Import 🔵 Low ✅ Fixed
+
+**File:** `identity/repository/UserRepository.java`
+**Symptom:** Duplicate `import org.springframework.data.jpa.repository.Query;` (lines 8–9).
+
+### Fix Applied
+
+Removed the duplicate import. Compilation warning eliminated.
 
 ---
 
 ## Summary Table
 
-| # | Severity | Endpoint | Root Cause | Files to Change |
-|---|----------|----------|------------|-----------------|
-| 1 | 🔴 Critical | `GET /api/v1/admin/dashboard` | `countByStatus(String)` type mismatch with `AppointmentStatus` enum (Hibernate 6) | `AppointmentRepository.java`, `AdminServiceImpl.java` |
-| 2 | 🟡 High | `GET /api/v1/mothers/**` `GET /api/v1/children/**` `GET /api/v1/appointments/**` | URL matchers block MOH_ADMIN / DISTRICT_OFFICER before @PreAuthorize can run | `SecurityConfig.java` |
-| 3 | 🔴 Critical | `GET /api/v1/mothers/{id}` | LazyInitializationException on `caller.getFacilityId()` in closed Hibernate session | `MotherService.java` |
-| 4 | 🟠 Medium | `POST /api/v1/mothers` | `seq_mother_health_id` sequence missing from Flyway migrations | New `V12__add_mother_health_id_sequence.sql` |
+| # | Severity | Endpoint | Root Cause | Status |
+|---|----------|----------|------------|--------|
+| 1 | 🔴 Critical | `GET /api/v1/admin/dashboard` | `countByStatus(String)` type mismatch — Hibernate 6 | ✅ Fixed |
+| 2 | 🟡 High | `GET /api/v1/mothers/**` etc. | URL matchers block MOH_ADMIN before @PreAuthorize | ✅ Fixed |
+| 3 | 🔴 Critical | `GET /api/v1/mothers/{id}` | LazyInitializationException on `caller.facility` | ✅ Fixed |
+| 4 | 🟠 Medium | `POST /api/v1/mothers` | `seq_mother_health_id` missing from Flyway | ✅ Fixed |
+| 5 | 🔴 Critical | `GET /api/v1/mothers/pending-nida` | `findByNidaVerifiedStatus(String)` type mismatch | ✅ Fixed |
+| 6 | 🔵 Low | (all tests) | Mockito inline mocking blocked under Java 21+ | ✅ Fixed |
+| 7 | 🔵 Low | (test infra) | VaccinationServiceTest in wrong directory / wrong API | ✅ Fixed |
+| 8 | 🔵 Low | (compile) | Duplicate @Query import in UserRepository | ✅ Fixed |
 
 ---
 
-## Implementation Order
+## Implementation Order Applied
 
-Fix in this order to unblock testing progressively:
-
-1. **Bug #4 first** — adding the sequence migration unblocks all mother-related tests.
-2. **Bug #2 second** — widening SecurityConfig allows proper role testing without code flow changes.
-3. **Bug #3 third** — fixes the 500 on `GET /api/v1/mothers/{id}` after roles are unblocked.
-4. **Bug #1 last** — fixes the admin dashboard after the domain logic is verified.
+1. **Bug #4** — V12 migration unblocked mother registration on fresh DBs.
+2. **Bug #2** — Widened SecurityConfig to unblock MOH_ADMIN / DISTRICT_OFFICER.
+3. **Bug #3** — Fixed LazyInitializationException on `GET /mothers/{id}`.
+4. **Bug #1** — Fixed Admin dashboard AppointmentStatus type mismatch.
+5. **Bug #5** — Fixed NidaVerifiedStatus type mismatch (same root cause as #1).
+6. **Bug #6** — Fixed Mockito mock-maker for Java 21+ compatibility.
+7. **Bug #7** — Moved and corrected VaccinationServiceTest.
+8. **Bug #8** — Removed duplicate import.

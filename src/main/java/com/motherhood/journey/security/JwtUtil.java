@@ -59,7 +59,9 @@ public class JwtUtil {
 
     public UUID extractFacilityId(String token) {
         String raw = extractClaim(token, claims -> claims.get("facilityId", String.class));
-        if (raw == null) return null;
+        if (raw == null) {
+            return null;
+        }
         try {
             return UUID.fromString(raw);
         } catch (IllegalArgumentException e) {

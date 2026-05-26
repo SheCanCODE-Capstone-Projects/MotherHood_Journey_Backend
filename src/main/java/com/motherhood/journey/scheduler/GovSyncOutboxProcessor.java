@@ -40,7 +40,9 @@ public class GovSyncOutboxProcessor {
         }
 
         var pending = delegate.fetchAndMarkInProgress();
-        if (pending.isEmpty()) return;
+        if (pending.isEmpty()) {
+            return;
+        }
 
         log.info("GovSyncOutboxProcessor: processing {} pending entry(ies)", pending.size());
         pending.forEach(entry -> delegate.dispatch(entry, iremboBaseUrl, iremboApiKey));
