@@ -1,18 +1,12 @@
-# syntax=docker/dockerfile:1.4
-
 # ── Stage 1: Build ────────────────────────────────────────────────
-# Cache the Maven local repo between builds so dependency downloads
-# only happen when pom.xml changes, not on every source change.
 FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /build
 
 COPY pom.xml .
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn dependency:go-offline -q
+RUN mvn dependency:go-offline -q
 
 COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn package -DskipTests -q
+RUN mvn package -DskipTests -q
 
 # ── Stage 2: Extract layered jar ──────────────────────────────────
 # Spring Boot layered jars split the fat-jar into four layers ordered
