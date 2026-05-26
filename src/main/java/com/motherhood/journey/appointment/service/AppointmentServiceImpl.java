@@ -208,7 +208,7 @@ public class AppointmentServiceImpl implements AppointmentService {
             return motherRepository.findById(patientRefId).map(Mother::getUser);
         } else if ("CHILD".equalsIgnoreCase(patientType)) {
             return childRepository.findById(patientRefId)
-                    .map(child -> child.getMother().getUser());
+                    .map(child -> child.getMother() != null ? child.getMother().getUser() : null);
         }
         return Optional.empty();
     }

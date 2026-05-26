@@ -96,7 +96,7 @@ public class NotificationServiceImpl implements NotificationService {
                     notification.setStatus(
                             NotificationStatus.FAILED.name());
                     log.error("SMS permanently failed: id={} error={}",
-                            notification.getId(), ex.getMessage());
+                            notification.getId(), ex.getMessage(), ex);
                 } else {
                     long backoffMinutes = (long) Math.pow(2, nextRetry);
                     notification.setScheduledAt(

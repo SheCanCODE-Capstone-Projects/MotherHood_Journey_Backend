@@ -64,7 +64,7 @@ public class SmsNotificationController {
 
         } catch (Exception e) {
             log.error("Failed to process delivery webhook: {}",
-                    e.getMessage());
+                    e.getMessage(), e);
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .build();

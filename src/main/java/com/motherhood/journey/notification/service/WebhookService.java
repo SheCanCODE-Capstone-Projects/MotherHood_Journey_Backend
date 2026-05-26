@@ -55,7 +55,7 @@ public class WebhookService {
 
         } catch (Exception e) {
             log.error("Failed to validate HMAC signature: {}",
-                    e.getMessage());
+                    e.getMessage(), e);
             return false;
         }
     }

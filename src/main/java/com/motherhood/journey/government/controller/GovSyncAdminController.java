@@ -36,10 +36,10 @@ public class GovSyncAdminController {
         description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
     public ResponseEntity<ApiResponse<Map<String, Long>>> status() {
         Map<String, Long> counts = Map.of(
-            "pending",     (long) repository.findByStatusOrderByCreatedAtDesc(SyncStatus.PENDING).size(),
-            "in_flight",   (long) repository.findByStatusOrderByCreatedAtDesc(SyncStatus.IN_FLIGHT).size(),
-            "succeeded",   (long) repository.findByStatusOrderByCreatedAtDesc(SyncStatus.SUCCEEDED).size(),
-            "dead_letter", (long) repository.findByDeadLetterTrue().size()
+            "pending",     repository.countByStatus(SyncStatus.PENDING),
+            "in_flight",   repository.countByStatus(SyncStatus.IN_FLIGHT),
+            "succeeded",   repository.countByStatus(SyncStatus.SUCCEEDED),
+            "dead_letter", repository.countByDeadLetterTrue()
         );
         return ResponseEntity.ok(ApiResponse.success(counts, "GovSync status"));
     }

@@ -111,7 +111,7 @@ public class ProductionConfig {
                 jdbc.execute(ddl);
                 log.debug("Partition ensured: {}", partition);
             } catch (Exception e) {
-                log.error("Failed to ensure audit_log partition {}: {}", partition, e.getMessage());
+                log.error("Failed to ensure audit_log partition {}: {}", partition, e.getMessage(), e);
             }
         }
     }

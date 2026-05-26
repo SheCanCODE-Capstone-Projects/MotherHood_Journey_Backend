@@ -23,4 +23,8 @@ public interface GovSyncLogRepository extends JpaRepository<GovSyncLog, UUID> {
 
     // For the monitoring endpoint
     List<GovSyncLog> findByStatusOrderByCreatedAtDesc(SyncStatus status);
+
+    long countByStatus(SyncStatus status);
+
+    long countByDeadLetterTrue();
 }

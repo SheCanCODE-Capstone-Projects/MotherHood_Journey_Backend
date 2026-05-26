@@ -1,5 +1,6 @@
 package com.motherhood.journey.geo.service;
 
+import com.motherhood.journey.common.exception.ResourceNotFoundException;
 import com.motherhood.journey.geo.dto.response.GeoResponse;
 import com.motherhood.journey.geo.dto.response.GeoSummaryResponseDTO;
 import com.motherhood.journey.geo.entity.GeoLocation;
@@ -90,7 +91,7 @@ public class GeoServiceImpl implements GeoService {
         GeoLocation geo = repository
                 .findByProvinceAndDistrictAndSectorAndCellAndVillage(
                         province, district, sector, cell, village)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Location not found for the given path"));
 
         return convertToResponse(geo);
@@ -101,7 +102,7 @@ public class GeoServiceImpl implements GeoService {
     @Override
     public GeoSummaryResponseDTO getSummary(UUID id) {
         GeoLocation geo = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Location not found with id: " + id));
 
         return convertToSummary(geo);

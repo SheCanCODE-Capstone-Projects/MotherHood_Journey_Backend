@@ -9,8 +9,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -42,14 +40,8 @@ public class AuditAspect {
             String action = annotation.action();
             String resourceType = annotation.resourceType();
 
-            // 3 — Extract who is making the request from Spring SecurityContext
-            String performedBy = "anonymous";
-            String facilityId = null;
-
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated()) {
-                performedBy = auth.getName();
-            }
+            // 3 — Caller identity is resolved inside auditService via
+            //      SecurityContextHolder, so we do not need to read it here.
 
             // 4 — Extract the first UUID argument as resourceId if present
             String resourceId = extractResourceId(joinPoint.getArgs());
@@ -57,7 +49,6 @@ public class AuditAspect {
             // 5 — Extract HTTP request details
             String clientIp = "unknown";
             String userAgent = "unknown";
-            String path = "unknown";
 
             ServletRequestAttributes attrs =
                     (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -66,12 +57,7 @@ public class AuditAspect {
                 HttpServletRequest request = attrs.getRequest();
                 clientIp = getClientIp(request);
                 userAgent = request.getHeader("User-Agent");
-                path = request.getRequestURI();
             }
-
-            // 6 — Generate traceId and log asynchronously
-            String traceId = UUID.randomUUID().toString()
-                    .replace("-", "").substring(0, 16);
 
             UUID resourceUuid = null;
             if (resourceId != null) {
@@ -90,7 +76,7 @@ public class AuditAspect {
 
         } catch (Exception e) {
             // Never let audit logging crash the main request
-            log.error("AuditAspect failed to log: {}", e.getMessage());
+            log.error("AuditAspect failed to log: {}", e.getMessage(), e);
         }
 
         return result;

@@ -116,9 +116,9 @@ public class MotherService {
 
     private String generateHealthId() {
         int year = Year.now().getValue();
-        long seq = (Long) entityManager
+        long seq = ((Number) entityManager
                 .createNativeQuery("SELECT nextval('seq_mother_health_id')")
-                .getSingleResult();
+                .getSingleResult()).longValue();
         return String.format("MH-%d-%06d", year, seq);
     }
 }
