@@ -5,6 +5,7 @@ import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.enums.UserRole;
+import com.motherhood.journey.identity.repository.UserRepository;
 import com.motherhood.journey.maternal.dto.request.CreatedMotherRequest;
 import com.motherhood.journey.maternal.dto.response.MotherResponse;
 import com.motherhood.journey.maternal.dto.response.MotherSummaryResponse;
@@ -27,6 +28,7 @@ public class MotherService {
     private final MotherRepository motherRepository;
     private final NidaVerificationService nidaVerificationService;
     private final EntityManager entityManager;
+    private final UserRepository userRepository;
 
     @Transactional
     @AuditedResource(action = "CREATE", resourceType = "MOTHER")
@@ -67,7 +69,16 @@ public class MotherService {
     public MotherResponse getMotherById(UUID id, User caller) {
         Mother mother = motherRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Mother not found: " + id));
-        enforceScope(mother, caller);
+
+        // Re-load caller within this transaction so lazy associations
+        // (facility, geoLocation) are reachable from an open Hibernate session.
+        // The principal handed in by @AuthenticationPrincipal originated from
+        // the JwtFilter's cached UserDetails — its session is long closed.
+        User freshCaller = userRepository.findById(caller.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Caller not found"));
+        freshCaller.setScopedGeoIds(caller.getScopedGeoIds());
+
+        enforceScope(mother, freshCaller);
         return MotherResponse.from(mother);
     }
 

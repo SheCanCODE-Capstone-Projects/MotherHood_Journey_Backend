@@ -171,13 +171,16 @@ Six roles with strictly enforced access control (URL-level matchers + `@PreAutho
 | Vaccinations | `/api/v1/vaccinations` | No |
 | Health Visits | `/api/v1/health-visits` | No |
 | Appointments | `/api/v1/appointments` | No |
-| Consent Records | `/api/v1/consent` | No |
+| Consent Records | `/api/v1/consents` | No |
 | Service Requests | `/api/v1/service-requests` | No |
+| Service Request Documents | `/api/v1/service-requests/{id}/documents` | No |
 | Government Reports | `/api/v1/gov-reports` | No |
-| Government Sync Log | `/api/v1/gov-sync-log` | No |
+| Government Sync (admin) | `/api/v1/gov-sync` | No (MOH_ADMIN) |
+| Government Users | `/api/v1/government` | No (MOH_ADMIN) |
 | Notifications | `/api/v1/notifications` | No |
 | Facilities | `/api/v1/facilities` | No |
-| Admin Dashboard | `/api/v1/admin` | No |
+| Admin Dashboard | `/api/v1/admin` | No (MOH_ADMIN) |
+| Users | `/api/v1/users` | No (MOH_ADMIN) |
 | User Profile | `/api/v1/me` | No |
 
 Full request/response documentation: [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)
@@ -268,16 +271,16 @@ Connected systems:
 
 ---
 
-## Known Issues
+## Resolved Issues
 
-See [docs/BUGS_AND_FIXES.md](docs/BUGS_AND_FIXES.md) for root cause analysis and exact code fixes.
+All four critical bugs listed in [docs/BUGS_AND_FIXES.md](docs/BUGS_AND_FIXES.md) are resolved on `main`:
 
-| # | Severity | Endpoint | Issue |
-|---|----------|----------|-------|
-| 1 | 🔴 Critical | `POST /api/v1/mothers` | `seq_mother_health_id` sequence missing from Flyway |
-| 2 | 🟡 High | Mothers / Children / Appointments | SecurityConfig URL matchers block MOH_ADMIN and DISTRICT_OFFICER |
-| 3 | 🔴 Critical | `GET /api/v1/mothers/{id}` | LazyInitializationException in `MotherService.enforceScope()` |
-| 4 | 🔴 Critical | `GET /api/v1/admin/dashboard` | `countByStatus(String)` type mismatch with AppointmentStatus enum |
+| # | Endpoint | Status |
+|---|----------|--------|
+| 1 | `POST /api/v1/mothers` — `seq_mother_health_id` missing | ✅ Added in `V20__Mother_Health_Id_Sequence.sql` |
+| 2 | SecurityConfig blocking MOH_ADMIN / DISTRICT_OFFICER | ✅ URL matchers now defer to per-method `@PreAuthorize` |
+| 3 | `GET /api/v1/mothers/{id}` LazyInitializationException | ✅ `MotherService.getMotherById` re-loads caller inside the transaction |
+| 4 | `GET /api/v1/admin/dashboard` enum type mismatch | ✅ `AppointmentRepository.countByStatus(AppointmentStatus)` is now typed |
 
 ---
 
