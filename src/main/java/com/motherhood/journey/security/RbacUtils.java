@@ -58,6 +58,17 @@ public final class RbacUtils {
         return auth.getDetails() instanceof FacilityAuthDetails fd ? fd.facilityId() : null;
     }
 
+    /**
+     * Geo scope from the current request's JWT — populated by JwtFilter on every
+     * request. Never sourced from the cached User principal (which is shared
+     * across threads and must not be mutated per-request).
+     */
+    public static List<UUID> currentGeoScopeIds() {
+        Authentication auth = currentAuth();
+        if (auth == null) return List.of();
+        return auth.getDetails() instanceof FacilityAuthDetails fd ? fd.geoScopeIds() : List.of();
+    }
+
     public static void assertSameFacility(UUID resourceFacilityId) {
         if (isCrossFacility()) return;
         UUID jwtFacilityId = currentJwtFacilityId();
@@ -71,8 +82,8 @@ public final class RbacUtils {
         if (user == null) return;
         UserRole role = user.getRole();
         if (role != UserRole.DISTRICT_OFFICER) return;
-        List<UUID> scope = user.getScopedGeoIds();
-        if (scope == null || scope.isEmpty() || !scope.contains(resourceGeoId)) {
+        List<UUID> scope = currentGeoScopeIds();
+        if (scope.isEmpty() || !scope.contains(resourceGeoId)) {
             throw new CustomException(
                 "Access denied: resource is outside your scoped sectors",
                 HttpStatus.FORBIDDEN);

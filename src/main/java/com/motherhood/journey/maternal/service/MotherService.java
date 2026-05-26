@@ -74,9 +74,9 @@ public class MotherService {
         // session by JwtFilter and is detached by the time we reach this method.
         User freshCaller = userRepository.findById(caller.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Caller not found: " + caller.getId()));
-        // Preserve the JWT-derived geo scope on the freshly loaded entity so the
-        // district-officer check below sees the same list the JwtFilter populated.
-        freshCaller.setScopedGeoIds(caller.getScopedGeoIds());
+        // Geo scope is per-request (carried on FacilityAuthDetails) — never on the
+        // shared cached User. Source it from the current authentication's details.
+        freshCaller.setScopedGeoIds(com.motherhood.journey.security.RbacUtils.currentGeoScopeIds());
 
         enforceScope(mother, freshCaller);
         return MotherResponse.from(mother);

@@ -50,13 +50,12 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = loadCached(phoneNumber);
 
-                if (userDetails instanceof com.motherhood.journey.identity.entity.User appUser) {
-                    appUser.setScopedGeoIds(geoScopeIds);
-                }
-
+                // Do NOT mutate the cached User — it is shared across concurrent
+                // requests for the same phone number. Geo-scope lives on the
+                // per-request FacilityAuthDetails instead.
                 UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new FacilityAuthDetails(facilityId));
+                authentication.setDetails(new FacilityAuthDetails(facilityId, geoScopeIds));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (JwtException ex) {

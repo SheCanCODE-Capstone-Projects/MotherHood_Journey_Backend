@@ -62,9 +62,13 @@ public class LocalFileStorageService implements FileStorageService {
         String sha256 = sha256(bytes);
         String filename = UUID.randomUUID() + extensionFor(detectedMime);
 
-        Path dir = Paths.get(root, subdirectory).normalize().toAbsolutePath();
+        Path rootAbs = Paths.get(root).normalize().toAbsolutePath();
+        Path dir = rootAbs.resolve(subdirectory).normalize();
         Path target = dir.resolve(filename).normalize();
-        if (!target.startsWith(dir)) {
+        // Guard against subdirectory traversal: dir must stay inside root,
+        // and target must stay inside dir (filename is server-generated so
+        // this second check is defense-in-depth).
+        if (!dir.startsWith(rootAbs) || !target.startsWith(dir)) {
             throw new CustomException("Invalid storage path", HttpStatus.BAD_REQUEST);
         }
 
