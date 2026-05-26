@@ -42,7 +42,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE:           prod
       # Use postgres service name — not localhost
-      SPRING_DATASOURCE_URL:            jdbc:postgresql://postgres:5432/${DB_NAME}
+      SPRING_DATASOURCE_URL:            ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/${DB_NAME}}
       SPRING_DATASOURCE_USERNAME:       ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD:       ${DB_PASSWORD}
       SPRING_FLYWAY_ENABLED:            "true"
