@@ -1,6 +1,5 @@
 package com.motherhood.journey.config;
 
-import com.motherhood.journey.identity.enums.UserRole;
 import com.motherhood.journey.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,16 +46,11 @@ public class SecurityConfig {
                         .requestMatchers("/webhooks/at/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/v1/mothers/**")
-                            .hasAnyRole(UserRole.HEALTH_WORKER.name(), UserRole.FACILITY_ADMIN.name())
-                        .requestMatchers("/api/v1/children/**")
-                            .hasAnyRole(UserRole.HEALTH_WORKER.name(), UserRole.FACILITY_ADMIN.name())
-                        .requestMatchers("/api/v1/appointments/**")
-                            .hasAnyRole(UserRole.HEALTH_WORKER.name(), UserRole.FACILITY_ADMIN.name(), UserRole.PATIENT.name())
-                        .requestMatchers("/api/v1/reports/**")
-                            .hasAnyRole(UserRole.GOVERNMENT_ANALYST.name(), UserRole.MOH_ADMIN.name())
-                        .requestMatchers("/api/v1/facilities/**")
-                            .hasAnyRole(UserRole.FACILITY_ADMIN.name(), UserRole.MOH_ADMIN.name())
+                        // Fine-grained role checks live on each controller method via
+                        // @PreAuthorize. The URL filter only enforces that the caller
+                        // is authenticated — letting any role-set defined per endpoint
+                        // (incl. MOH_ADMIN, DISTRICT_OFFICER, GOVERNMENT_ANALYST) pass
+                        // the URL gate.
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

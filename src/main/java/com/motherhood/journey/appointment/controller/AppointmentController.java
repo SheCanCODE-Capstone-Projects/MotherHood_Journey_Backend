@@ -34,7 +34,7 @@ public class AppointmentController {
     @Operation(summary = "Create a new appointment",
         description = "Restricted to HEALTH_WORKER, FACILITY_ADMIN, MOH_ADMIN.")
     public ResponseEntity<AppointmentResponse> create(
-            @RequestBody CreateAppointmentRequest request) {
+            @Valid @RequestBody CreateAppointmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(appointmentService.createAppointment(request));
     }
@@ -46,7 +46,7 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> update(
             @PathVariable UUID id,
             @RequestParam UUID facilityId,
-            @RequestBody UpdateAppointmentRequest request) {
+            @Valid @RequestBody UpdateAppointmentRequest request) {
         return ResponseEntity.ok(appointmentService.updateAppointment(id, facilityId, request));
     }
 
