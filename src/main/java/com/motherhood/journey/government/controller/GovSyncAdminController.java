@@ -4,9 +4,13 @@ import com.motherhood.journey.common.dto.ApiResponse;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.government.entity.GovSyncLog;
 import com.motherhood.journey.government.enums.SyncStatus;
+import com.motherhood.journey.government.enums.TargetSystem;
 import com.motherhood.journey.government.repository.GovSyncLogRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,7 +25,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/admin/gov-sync")
 @PreAuthorize("hasAnyRole('MOH_ADMIN', 'FACILITY_ADMIN')")
-@io.swagger.v3.oas.annotations.tags.Tag(name = "Gov Sync Admin",
+@Tag(name = "Gov Sync Admin",
     description = "Monitor outbox status, inspect DEAD_LETTER queue, manually retry failed sync entries")
 public class GovSyncAdminController {
 
@@ -44,6 +48,19 @@ public class GovSyncAdminController {
         return ResponseEntity.ok(ApiResponse.success(counts, "GovSync status"));
     }
 
+    @GetMapping
+    @Operation(summary = "List sync log entries (optionally filtered)",
+        description = "Filters: ?status=PENDING|IN_FLIGHT|SUCCEEDED|DEAD_LETTER, "
+                    + "?targetSystem=IREMBO|NIDA|HMIS. Both filters are optional. "
+                    + "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
+    public ResponseEntity<ApiResponse<Page<GovSyncLog>>> list(
+            @RequestParam(required = false) SyncStatus status,
+            @RequestParam(required = false) TargetSystem targetSystem,
+            @PageableDefault(size = 25) Pageable pageable) {
+        Page<GovSyncLog> page = repository.search(status, targetSystem, pageable);
+        return ResponseEntity.ok(ApiResponse.success(page, "GovSync entries"));
+    }
+
     @GetMapping("/dead-letter")
     @Operation(summary = "List dead-letter sync entries",
         description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
@@ -53,8 +70,10 @@ public class GovSyncAdminController {
 
     @PostMapping("/{id}/retry")
     @Transactional
+    @PreAuthorize("hasRole('MOH_ADMIN')")
     @Operation(summary = "Retry a failed sync entry",
-        description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
+        description = "Re-queues a DEAD_LETTER entry by clearing retryCount and status. "
+                    + "Restricted to MOH_ADMIN only — per sprint plan.")
     public ResponseEntity<ApiResponse<Void>> retry(@PathVariable UUID id) {
         GovSyncLog entry = repository.findById(id)
             .orElseThrow(() -> new CustomException("GovSyncLog entry not found", HttpStatus.NOT_FOUND));

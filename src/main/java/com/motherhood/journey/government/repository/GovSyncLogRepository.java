@@ -2,7 +2,12 @@ package com.motherhood.journey.government.repository;
 
 import com.motherhood.journey.government.entity.GovSyncLog;
 import com.motherhood.journey.government.enums.SyncStatus;
+import com.motherhood.journey.government.enums.TargetSystem;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -27,4 +32,14 @@ public interface GovSyncLogRepository extends JpaRepository<GovSyncLog, UUID> {
     long countByStatus(SyncStatus status);
 
     long countByDeadLetterTrue();
+
+    @Query("""
+        SELECT g FROM GovSyncLog g
+        WHERE (:status IS NULL OR g.status = :status)
+          AND (:targetSystem IS NULL OR g.targetSystem = :targetSystem)
+        ORDER BY g.createdAt DESC
+        """)
+    Page<GovSyncLog> search(@Param("status") SyncStatus status,
+                            @Param("targetSystem") TargetSystem targetSystem,
+                            Pageable pageable);
 }

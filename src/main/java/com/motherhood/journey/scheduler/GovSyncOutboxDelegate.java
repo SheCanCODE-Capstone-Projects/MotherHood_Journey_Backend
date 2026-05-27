@@ -3,6 +3,7 @@ package com.motherhood.journey.scheduler;
 import com.motherhood.journey.government.entity.GovSyncLog;
 import com.motherhood.journey.government.enums.SyncStatus;
 import com.motherhood.journey.government.repository.GovSyncLogRepository;
+import com.motherhood.journey.notification.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -27,11 +28,14 @@ public class GovSyncOutboxDelegate {
     private static final int MAX_RETRIES = 5;
 
     private final GovSyncLogRepository govSyncLogRepository;
+    private final NotificationService notificationService;
     private final RestClient restClient;
 
     public GovSyncOutboxDelegate(GovSyncLogRepository govSyncLogRepository,
+                                  NotificationService notificationService,
                                   RestClient.Builder restClientBuilder) {
         this.govSyncLogRepository = govSyncLogRepository;
+        this.notificationService = notificationService;
         this.restClient = restClientBuilder.build();
     }
 
@@ -86,6 +90,16 @@ public class GovSyncOutboxDelegate {
                 entry.setDeadLetter(true);
                 log.error("GovSyncOutboxDelegate: entry {} FAILED after {} retries — {}",
                     entry.getId(), retries, e.getMessage(), e);
+                // Alert MOH_ADMIN users — required by sprint plan.
+                // Swallow alerting failures so the outbox row still persists.
+                try {
+                    notificationService.sendAdminAlert(String.format(
+                        "GovSync DEAD_LETTER: entry %s (target=%s, retries=%d) — %s",
+                        entry.getId(), entry.getTargetSystem(), retries, e.getMessage()));
+                } catch (Exception alertEx) {
+                    log.error("Failed to enqueue DEAD_LETTER admin alert for {}: {}",
+                        entry.getId(), alertEx.getMessage(), alertEx);
+                }
             } else {
                 entry.setStatus(SyncStatus.PENDING);
                 entry.setNextRetryAt(OffsetDateTime.now().plusMinutes((long) Math.pow(2, retries)));

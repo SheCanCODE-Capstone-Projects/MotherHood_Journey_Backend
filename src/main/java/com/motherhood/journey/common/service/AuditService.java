@@ -4,6 +4,7 @@ import com.motherhood.journey.common.entity.AuditLog;
 import com.motherhood.journey.common.enums.AuditAction;
 import com.motherhood.journey.common.repository.AuditLogRepository;
 import com.motherhood.journey.identity.repository.UserRepository;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -27,19 +28,30 @@ public class AuditService {
      * Records a successful audit event in a separate transaction so the entry
      * is always persisted even if the caller's transaction rolls back.
      */
+    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(AuditAction action, String resourceType, UUID resourceId) {
+        log(action, resourceType, resourceId, null, null);
+    }
+
+    @Async
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void log(AuditAction action, String resourceType, UUID resourceId,
+                    String ipAddress, String userAgent) {
         resolveUser().ifPresent(user ->
             auditLogRepository.save(AuditLog.builder()
                 .user(user)
                 .action(action.name())
                 .resourceType(resourceType)
                 .resourceId(resourceId)
+                .ipAddress(ipAddress)
+                .userAgent(truncate(userAgent, 512))
                 .success(true)
                 .build())
         );
     }
 
+    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logFailure(AuditAction action, String resourceType, UUID resourceId, String reason) {
         resolveUser().ifPresent(user ->
@@ -49,9 +61,14 @@ public class AuditService {
                 .resourceType(resourceType)
                 .resourceId(resourceId)
                 .success(false)
-                .failReason(reason != null && reason.length() > 128 ? reason.substring(0, 128) : reason)
+                .failReason(truncate(reason, 128))
                 .build())
         );
+    }
+
+    private static String truncate(String s, int max) {
+        if (s == null) return null;
+        return s.length() > max ? s.substring(0, max) : s;
     }
 
     private java.util.Optional<com.motherhood.journey.identity.entity.User> resolveUser() {
