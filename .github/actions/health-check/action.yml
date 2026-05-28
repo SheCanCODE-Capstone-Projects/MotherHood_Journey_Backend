@@ -1,26 +1,28 @@
 name: Health Check
 description: >
-  Polls the Spring Boot Actuator health endpoint on a remote host
-  until it returns HTTP 200 or the retry limit is reached. Fully
-  configurable: callers set the scheme (http/https), port,
-  retry count, and wait interval. Used identically in staging
-  (http, port 8080, 12 retries) and production (https, port 443,
-  6 retries) — no duplication.
+  Polls a health endpoint until it returns HTTP 200 or the retry
+  limit is reached. Accepts either a full URL (recommended for Railway)
+  or separate host/port/scheme components.
 
 inputs:
+  url:
+    description: Full URL to poll, e.g. https://myapp.up.railway.app/actuator/health
+    required: false
+    default: ""
   host:
-    description: Hostname or IP to check
-    required: true
+    description: Hostname or IP (used only when 'url' is not set)
+    required: false
+    default: ""
   port:
-    description: Port number, e.g. "8080" or "443"
+    description: Port number (used only when 'url' is not set)
     required: false
     default: "8080"
   scheme:
-    description: Protocol to use — "http" or "https"
+    description: Protocol — "http" or "https" (used only when 'url' is not set)
     required: false
     default: http
   path:
-    description: Health endpoint path
+    description: Health endpoint path (used only when 'url' is not set)
     required: false
     default: /actuator/health
   max-retries:
@@ -38,14 +40,20 @@ runs:
     - name: Poll health endpoint
       shell: bash
       env:
+        INPUT_URL:   ${{ inputs.url }}
         SCHEME:      ${{ inputs.scheme }}
         HOST:        ${{ inputs.host }}
         PORT:        ${{ inputs.port }}
-        PATH:        ${{ inputs.path }}
+        PATH_SUFFIX: ${{ inputs.path }}
         MAX_RETRIES: ${{ inputs.max-retries }}
         INTERVAL:    ${{ inputs.interval }}
       run: |
-        URL="${SCHEME}://${HOST}:${PORT}${PATH}"
+        if [ -n "$INPUT_URL" ]; then
+          URL="$INPUT_URL"
+        else
+          URL="${SCHEME}://${HOST}:${PORT}${PATH_SUFFIX}"
+        fi
+
         echo "Polling $URL (max ${MAX_RETRIES} attempts, ${INTERVAL}s apart)"
 
         for i in $(seq 1 "$MAX_RETRIES"); do
