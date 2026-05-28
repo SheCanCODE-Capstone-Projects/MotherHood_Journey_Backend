@@ -36,6 +36,7 @@ public class GovSyncAdminController {
     }
 
     @GetMapping("/status")
+    @Transactional(readOnly = true)
     @Operation(summary = "Get outbox sync counters by status",
         description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
     public ResponseEntity<ApiResponse<Map<String, Long>>> status() {
@@ -49,6 +50,7 @@ public class GovSyncAdminController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     @Operation(summary = "List sync log entries (optionally filtered)",
         description = "Filters: ?status=PENDING|IN_FLIGHT|SUCCEEDED|DEAD_LETTER, "
                     + "?targetSystem=IREMBO|NIDA|HMIS. Both filters are optional. "
@@ -62,6 +64,7 @@ public class GovSyncAdminController {
     }
 
     @GetMapping("/dead-letter")
+    @Transactional(readOnly = true)
     @Operation(summary = "List dead-letter sync entries",
         description = "Restricted to MOH_ADMIN, FACILITY_ADMIN.")
     public ResponseEntity<ApiResponse<List<GovSyncLog>>> deadLetterQueue() {

@@ -1,6 +1,5 @@
 package com.motherhood.journey.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -12,30 +11,15 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    /**
-     * Additional exact origins injected from CORS_ALLOWED_ORIGINS (comma-separated).
-     * Used for production domains. Localhost is always allowed via origin patterns below.
-     */
-    @Value("${app.cors.allowed-origins:}")
-    private List<String> extraAllowedOrigins;
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Allow any localhost / 127.0.0.1 port — covers React (:3000), Angular (:4200),
-        // Vite (:5173), or any other local dev server without needing to enumerate ports.
-        config.setAllowedOriginPatterns(List.of(
-            "http://localhost:*",
-            "http://127.0.0.1:*"
-        ));
-
-        // Merge production origins from env (e.g. https://app.motherhood.rw)
-        if (extraAllowedOrigins != null) {
-            extraAllowedOrigins.stream()
-                .filter(o -> o != null && !o.isBlank())
-                .forEach(config::addAllowedOrigin);
-        }
+        // allowedOriginPatterns("*") + allowCredentials(true) is spec-compliant:
+        // Spring reflects the exact request Origin back instead of sending "*",
+        // which satisfies the browser CORS spec while still accepting every origin —
+        // including localhost dev servers, Postman, and production front-ends.
+        config.setAllowedOriginPatterns(List.of("*"));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));

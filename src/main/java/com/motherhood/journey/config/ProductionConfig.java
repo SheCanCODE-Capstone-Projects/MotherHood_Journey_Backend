@@ -24,6 +24,9 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.cache.annotation.CachingConfigurer;
+import org.springframework.cache.interceptor.CacheErrorHandler;
+import org.springframework.cache.interceptor.SimpleCacheErrorHandler;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -36,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 @EnableCaching
 @EnableScheduling
-public class ProductionConfig {
+public class ProductionConfig implements CachingConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(ProductionConfig.class);
     private static final int PARTITIONS_AHEAD = 3;
@@ -48,6 +51,13 @@ public class ProductionConfig {
                             org.springframework.beans.factory.ObjectProvider<CacheManager> cacheManagerProvider) {
         this.jdbc = jdbc;
         this.cacheManagerProvider = cacheManagerProvider;
+    }
+
+    // When Redis is unreachable, log the error and bypass the cache rather than
+    // propagating a connection exception that would kill the request entirely.
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new SimpleCacheErrorHandler();
     }
 
     /**

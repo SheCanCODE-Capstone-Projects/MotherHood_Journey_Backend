@@ -66,29 +66,28 @@ services:
       redis:
         condition: service_healthy
     environment:
-      SPRING_PROFILES_ACTIVE:           prod
+      SPRING_PROFILES_ACTIVE:           ${SPRING_PROFILES_ACTIVE:-prod}
       # Use postgres service name — not localhost
       SPRING_DATASOURCE_URL:            ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/${DB_NAME}}
       SPRING_DATASOURCE_USERNAME:       ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD:       ${DB_PASSWORD}
       SPRING_FLYWAY_ENABLED:            "true"
       # Redis — use Docker service name, internal port 6379
-      REDIS_HOST:                       redis
-      REDIS_PORT:                       6379
+      REDIS_URL:                        redis://redis:6379
       JWT_SECRET:                       ${JWT_SECRET}
       JWT_EXPIRATION_MS:                ${JWT_EXPIRATION_MS:-86400000}
       JWT_REFRESH_EXPIRATION_MS:        ${JWT_REFRESH_EXPIRATION_MS:-604800000}
-      CORS_ALLOWED_ORIGINS:             ${CORS_ALLOWED_ORIGINS}
+      CORS_ALLOWED_ORIGINS:             ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       SERVER_PORT:                      ${APP_PORT:-8080}
       AT_API_KEY:                       ${AT_API_KEY:-}
       AT_USERNAME:                      ${AT_USERNAME:-}
-      # Irembo: IREMBO_API_BASE_URL → irembo.api.base-url  /  IREMBO_API_KEY → irembo.api.key
-      IREMBO_API_BASE_URL:              ${IREMBO_API_BASE_URL:-}
+      # Irembo: IREMBO_BASE_URL → irembo.api.base-url  /  IREMBO_API_KEY → irembo.api.key
+      IREMBO_BASE_URL:                  ${IREMBO_BASE_URL:-}
       IREMBO_API_KEY:                   ${IREMBO_API_KEY:-}
-      # HMIS:   HMIS_API_BASE_URL → hmis.api.base-url      /  HMIS_API_KEY → hmis.api.key
-      HMIS_API_BASE_URL:                ${HMIS_API_BASE_URL:-}
+      # HMIS:   HMIS_BASE_URL → hmis.api.base-url      /  HMIS_API_KEY → hmis.api.key
+      HMIS_BASE_URL:                    ${HMIS_BASE_URL:-}
       HMIS_API_KEY:                     ${HMIS_API_KEY:-}
-      # NIDA:   NIDA_BASE_URL → nida.base-url              /  NIDA_API_KEY → nida.api-key
+      # NIDA:   NIDA_BASE_URL → nida.base-url          /  NIDA_API_KEY → nida.api-key
       NIDA_BASE_URL:                    ${NIDA_BASE_URL:-}
       NIDA_API_KEY:                     ${NIDA_API_KEY:-}
       ESCALATION_PENDING_HOURS:         ${ESCALATION_PENDING_HOURS:-48}
