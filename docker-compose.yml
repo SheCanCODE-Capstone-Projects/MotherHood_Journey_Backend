@@ -63,6 +63,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE:           prod
       # Use postgres service name — not localhost
@@ -70,6 +72,9 @@ services:
       SPRING_DATASOURCE_USERNAME:       ${DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD:       ${DB_PASSWORD}
       SPRING_FLYWAY_ENABLED:            "true"
+      # Redis — use Docker service name, internal port 6379
+      REDIS_HOST:                       redis
+      REDIS_PORT:                       6379
       JWT_SECRET:                       ${JWT_SECRET}
       JWT_EXPIRATION_MS:                ${JWT_EXPIRATION_MS:-86400000}
       JWT_REFRESH_EXPIRATION_MS:        ${JWT_REFRESH_EXPIRATION_MS:-604800000}

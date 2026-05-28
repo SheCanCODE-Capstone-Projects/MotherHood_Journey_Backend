@@ -10,6 +10,7 @@ import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.geo.repository.GeoRepository;
 import com.motherhood.journey.government.dto.request.SubmitServiceRequestRequest;
 import com.motherhood.journey.government.dto.response.ServiceRequestResponse;
+import com.motherhood.journey.government.enums.ServiceRequestStatus;
 import com.motherhood.journey.government.enums.ServiceType;
 import com.motherhood.journey.government.enums.SyncStatus;
 import com.motherhood.journey.government.enums.TargetSystem;
@@ -127,7 +128,7 @@ class ServiceRequestFlowIntegrationTest extends IntegrationTestBase {
         assertThat(response.referenceNo())
             .as("Reference number must match SR-YYYY-NNNNN")
             .matches("^SR-\\d{4}-\\d{5}$");
-        assertThat(response.status()).isEqualTo("PENDING");
+        assertThat(response.status()).isEqualTo(ServiceRequestStatus.PENDING);
 
         // Outbox row exists for async dispatch
         var outboxRows = govSyncLogRepository.findAll().stream()

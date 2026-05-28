@@ -26,7 +26,15 @@
         <testcontainers.version>1.20.4</testcontainers.version>
         <shedlock.version>5.16.0</shedlock.version>
         <logstash.encoder.version>8.0</logstash.encoder.version>
+        <africastalking.version>v3.5.3</africastalking.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <dependencies>
 
@@ -191,6 +199,13 @@
             <version>3.0.0</version>
         </dependency>
 
+        <!-- ===== AFRICA'S TALKING SMS SDK ===== -->
+        <dependency>
+            <groupId>com.github.AfricasTalkingLtd.africastalking-java</groupId>
+            <artifactId>core</artifactId>
+            <version>${africastalking.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -239,7 +254,14 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- Docker Desktop on Linux uses ~/.docker/desktop/docker.sock
+                         which only responds to Docker API v1.41+. docker-java
+                         defaults to v1.24, which returns 400 on this machine.
+                         docker.host and api.version are the System.getProperty keys
+                         that docker-java reads (see DefaultDockerClientConfig). -->
                     <argLine>
+                        -Ddocker.host=unix://${user.home}/.docker/desktop/docker.sock
+                        -Dapi.version=1.41
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.util=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED

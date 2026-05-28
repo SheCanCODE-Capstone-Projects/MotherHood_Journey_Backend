@@ -4,7 +4,6 @@ import com.motherhood.journey.common.entity.AuditLog;
 import com.motherhood.journey.common.enums.AuditAction;
 import com.motherhood.journey.common.repository.AuditLogRepository;
 import com.motherhood.journey.identity.repository.UserRepository;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -27,14 +26,14 @@ public class AuditService {
     /**
      * Records a successful audit event in a separate transaction so the entry
      * is always persisted even if the caller's transaction rolls back.
+     * Not async: SecurityContextHolder is thread-local and would be empty in a
+     * new thread, causing resolveUser() to silently return empty.
      */
-    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(AuditAction action, String resourceType, UUID resourceId) {
         log(action, resourceType, resourceId, null, null);
     }
 
-    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(AuditAction action, String resourceType, UUID resourceId,
                     String ipAddress, String userAgent) {
@@ -51,7 +50,6 @@ public class AuditService {
         );
     }
 
-    @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void logFailure(AuditAction action, String resourceType, UUID resourceId, String reason) {
         resolveUser().ifPresent(user ->

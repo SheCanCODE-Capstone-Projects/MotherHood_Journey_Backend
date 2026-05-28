@@ -32,6 +32,7 @@ public class MotherController {
     private final MotherService motherService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN')")
     @Operation(summary = "Register a new mother",
         description = "Creates a mother record, generates a unique MH-YYYY-NNNNNN health ID, and triggers async NIDA verification.")
     public ResponseEntity<MotherResponse> register(
@@ -57,7 +58,7 @@ public class MotherController {
         return ResponseEntity.ok(motherService.getMotherById(id, caller));
     }
 
-    @PreAuthorize("hasAnyRole('MOH_ADMIN','FACILITY_ADMIN')")
+    @PreAuthorize("hasAnyRole('HEALTH_WORKER','FACILITY_ADMIN')")
     @GetMapping("/pending-nida")
     @Operation(summary = "List mothers awaiting NIDA verification")
     public ResponseEntity<List<MotherSummaryResponse>> getPendingNidaVerification() {

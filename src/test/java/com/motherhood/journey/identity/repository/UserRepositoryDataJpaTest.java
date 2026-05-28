@@ -1,10 +1,12 @@
 package com.motherhood.journey.identity.repository;
 
+import com.motherhood.journey.DockerAvailableCondition;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.geo.repository.GeoRepository;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.enums.UserRole;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -28,6 +30,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = NONE)
 @Testcontainers
+@ExtendWith(DockerAvailableCondition.class)
 class UserRepositoryDataJpaTest {
 
     @Container

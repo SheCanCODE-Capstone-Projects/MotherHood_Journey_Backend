@@ -19,8 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -31,8 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * E2E flow: caller (a health worker) registers a mother.
  * Verifies the full chain: geo lookup, facility lookup, health ID generation
  * (MH-YYYY-NNNNNN format), NIDA verification trigger, and audit log entry.
+ * Not @Transactional: AuditService uses REQUIRES_NEW which needs a separate
+ * connection and cannot see uncommitted data from an outer test transaction.
  */
-@Transactional
 class MotherRegistrationFlowIntegrationTest extends IntegrationTestBase {
 
     @Autowired MotherService motherService;

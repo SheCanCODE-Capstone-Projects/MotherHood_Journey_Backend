@@ -8,6 +8,7 @@ import com.motherhood.journey.child.repository.VaccinationRecordRepository;
 import com.motherhood.journey.child.repository.VaccinationRepository;
 import com.motherhood.journey.common.exception.CustomException;
 import com.motherhood.journey.common.service.AuditService;
+import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.repository.UserRepository;
 import com.motherhood.journey.notification.service.NotificationService;
@@ -63,10 +64,13 @@ class VaccinationServiceImplTest {
             .windowDays(7)
             .build();
 
+        Facility facility = Facility.builder().id(facilityId).build();
+
         record = VaccinationRecord.builder()
             .id(recordId)
             .child(child)
             .schedule(schedule)
+            .facility(facility)
             .dueDate(LocalDate.now().minusDays(30))
             .status("PENDING")
             .build();

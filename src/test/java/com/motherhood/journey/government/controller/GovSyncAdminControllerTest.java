@@ -54,13 +54,11 @@ class GovSyncAdminControllerTest extends IntegrationTestBase {
     }
 
     @Test
-    void retry_asFacilityAdmin_returns200() throws Exception {
+    void retry_asFacilityAdmin_returns403() throws Exception {
         UUID id = UUID.randomUUID();
-        when(repository.findById(eq(id))).thenReturn(Optional.of(sampleEntry(id)));
-
         mockMvc.perform(post("/api/v1/admin/gov-sync/" + id + "/retry")
                 .with(user("fa").roles("FACILITY_ADMIN")))
-            .andExpect(status().isOk());
+            .andExpect(status().isForbidden());
     }
 
     @Test
