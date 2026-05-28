@@ -5,7 +5,11 @@ import com.motherhood.journey.government.dto.request.CreateGovernmentUserRequest
 import com.motherhood.journey.government.dto.request.UpdateGovernmentScopeRequest;
 import com.motherhood.journey.government.dto.response.GovernmentResponse;
 import com.motherhood.journey.government.entity.GovernmentUser;
+import com.motherhood.journey.government.entity.GovSyncLog;
+import com.motherhood.journey.government.enums.SyncType;
+import com.motherhood.journey.government.enums.TargetSystem;
 import com.motherhood.journey.government.repository.GovernmentRepository;
+import com.motherhood.journey.government.repository.GovSyncLogRepository;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -13,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -20,12 +25,15 @@ import java.util.UUID;
 public class GovernmentServiceImpl implements GovernmentService {
 
     private final GovernmentRepository governmentRepository;
-    private final UserRepository userRepository;
+    private final GovSyncLogRepository govSyncLogRepository;
+    private final UserRepository       userRepository;
 
     public GovernmentServiceImpl(GovernmentRepository governmentRepository,
+                                 GovSyncLogRepository govSyncLogRepository,
                                  UserRepository userRepository) {
         this.governmentRepository = governmentRepository;
-        this.userRepository = userRepository;
+        this.govSyncLogRepository = govSyncLogRepository;
+        this.userRepository       = userRepository;
     }
 
     @Override
@@ -52,13 +60,34 @@ public class GovernmentServiceImpl implements GovernmentService {
         if (governmentRepository.findByUser_Id(user.getId()).isPresent()) {
             throw new CustomException("User is already a government user", HttpStatus.CONFLICT);
         }
+
         GovernmentUser gu = GovernmentUser.builder()
             .user(user)
             .govRole(request.govRole())
             .ministry(request.ministry())
             .employeeId(request.employeeId())
             .build();
-        return GovernmentResponse.from(governmentRepository.save(gu));
+
+        GovernmentUser saved = governmentRepository.save(gu);
+
+        // Queue NIDA identity verification for the linked user via the outbox
+        if (user.getNationalId() != null && !user.getNationalId().isBlank()) {
+            GovSyncLog syncLog = GovSyncLog.builder()
+                .targetSystem(TargetSystem.NIDA)
+                .syncType(SyncType.IDENTITY_VERIFY.name())
+                .idempotencyKey("NIDA-GOV-" + saved.getId())
+                .referenceNo(user.getNationalId())
+                .payload(Map.of(
+                    "nationalId", user.getNationalId(),
+                    "firstName",  user.getFirstName(),
+                    "lastName",   user.getLastName(),
+                    "govUserId",  saved.getId().toString()
+                ))
+                .build();
+            govSyncLogRepository.save(syncLog);
+        }
+
+        return GovernmentResponse.from(saved);
     }
 
     @Override

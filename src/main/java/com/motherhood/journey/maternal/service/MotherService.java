@@ -96,7 +96,8 @@ public class MotherService {
         UserRole role = caller.getRole();
 
         if (role == UserRole.HEALTH_WORKER || role == UserRole.FACILITY_ADMIN) {
-            if (!caller.getFacilityId().equals(mother.getFacility().getId())) {
+            UUID callerFacilityId = caller.getFacilityId();
+            if (callerFacilityId == null || !callerFacilityId.equals(mother.getFacility().getId())) {
                 throw new SecurityException("Access denied: mother belongs to a different facility");
             }
             return;

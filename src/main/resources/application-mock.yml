@@ -1,0 +1,23 @@
+###############################################################
+#  Mock-profile: government API stubs embedded in this app.
+#  Run with: --spring.profiles.active=local,mock
+#  The mock controllers serve at /mock/nida, /mock/irembo, /mock/hmis.
+###############################################################
+
+mock:
+  gov-apis:
+    enabled: true
+
+nida:
+  base-url: http://localhost:8080/mock/nida
+  api-key: mock-nida-key-dev
+
+irembo:
+  api:
+    base-url: http://localhost:8080/mock/irembo
+    key: mock-irembo-key-dev
+
+hmis:
+  api:
+    base-url: http://localhost:8080/mock/hmis
+    key: mock-hmis-key-dev

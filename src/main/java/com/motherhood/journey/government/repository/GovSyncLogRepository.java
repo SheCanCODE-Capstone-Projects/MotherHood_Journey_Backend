@@ -16,7 +16,19 @@ import java.util.UUID;
 
 public interface GovSyncLogRepository extends JpaRepository<GovSyncLog, UUID> {
 
-    // Fetch all rows ready to be processed (not in-flight, not done, retry time reached)
+    // Fetch all rows ready to be processed.
+    // nextRetryAt IS NULL means "dispatch immediately" (initial entry); otherwise honour the scheduled time.
+    @Query("""
+        SELECT g FROM GovSyncLog g
+        WHERE g.status = :status
+          AND g.deadLetter = false
+          AND (g.nextRetryAt IS NULL OR g.nextRetryAt <= :now)
+        ORDER BY g.createdAt ASC
+        """)
+    List<GovSyncLog> findPendingForDispatch(@Param("status") SyncStatus status,
+                                            @Param("now") OffsetDateTime now);
+
+    // Legacy — kept for compatibility; prefer findPendingForDispatch
     List<GovSyncLog> findByStatusAndNextRetryAtLessThanEqualAndDeadLetterFalse(
             SyncStatus status, OffsetDateTime now);
 

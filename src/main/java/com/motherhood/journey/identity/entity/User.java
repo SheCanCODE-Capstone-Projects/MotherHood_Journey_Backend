@@ -3,6 +3,8 @@ package com.motherhood.journey.identity.entity;
 import com.motherhood.journey.geo.entity.Facility;
 import com.motherhood.journey.geo.entity.GeoLocation;
 import com.motherhood.journey.identity.enums.UserRole;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -39,6 +41,7 @@ import java.util.UUID;
         }
 )
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class User implements UserDetails {
 
     @Id
@@ -103,29 +106,32 @@ public class User implements UserDetails {
 
 
     @Override
+    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.toGrantedAuthority()));
     }
 
-    @Override public String  getPassword()             { return passwordHash; }
-    @Override public String  getUsername()             { return phoneNumber;  }
-    @Override public boolean isAccountNonExpired()     { return true;         }
-    @Override public boolean isAccountNonLocked() {
+    @Override @JsonIgnore public String  getPassword()             { return passwordHash; }
+    @Override @JsonIgnore public String  getUsername()             { return phoneNumber;  }
+    @Override @JsonIgnore public boolean isAccountNonExpired()     { return true;         }
+    @Override @JsonIgnore public boolean isAccountNonLocked() {
         return lockedUntil == null || lockedUntil.isBefore(LocalDateTime.now());
     }
-    @Override public boolean isCredentialsNonExpired() { return true;         }
-    @Override public boolean isEnabled()               { return active;       }
+    @Override @JsonIgnore public boolean isCredentialsNonExpired() { return true;         }
+    @Override @JsonIgnore public boolean isEnabled()               { return active;       }
 
 
+    @JsonIgnore
     public String getFullName() {
         return firstName + " " + lastName;
     }
 
+    @JsonIgnore
     public UUID getFacilityId() {
         return facility != null ? facility.getId() : null;
     }
 
-
+    @JsonIgnore
     public UUID getGeoLocationId() {
         return geoLocation != null ? geoLocation.getId() : null;
     }

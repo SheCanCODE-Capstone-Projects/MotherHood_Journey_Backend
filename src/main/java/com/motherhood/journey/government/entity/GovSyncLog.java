@@ -69,7 +69,7 @@ public class GovSyncLog {
     @Column(name = "idempotency_key", nullable = false, unique = true, length = 64)
     private String idempotencyKey;
 
-    @Column(name = "reference_no", length = 32)
+    @Column(name = "reference_no", length = 64)
     private String referenceNo;
 
     @Column(name = "payload_hash", length = 64)

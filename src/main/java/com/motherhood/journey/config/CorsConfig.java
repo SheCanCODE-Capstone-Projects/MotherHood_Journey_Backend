@@ -13,17 +13,30 @@ import java.util.List;
 public class CorsConfig {
 
     /**
-     * Allowed origins are injected from CORS_ALLOWED_ORIGINS environment variable.
-     * The localhost default is for local development only — always set
-     * CORS_ALLOWED_ORIGINS in production (e.g. https://app.motherhood.rw).
+     * Additional exact origins injected from CORS_ALLOWED_ORIGINS (comma-separated).
+     * Used for production domains. Localhost is always allowed via origin patterns below.
      */
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
-    private List<String> allowedOrigins;
+    @Value("${app.cors.allowed-origins:}")
+    private List<String> extraAllowedOrigins;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+
+        // Allow any localhost / 127.0.0.1 port — covers React (:3000), Angular (:4200),
+        // Vite (:5173), or any other local dev server without needing to enumerate ports.
+        config.setAllowedOriginPatterns(List.of(
+            "http://localhost:*",
+            "http://127.0.0.1:*"
+        ));
+
+        // Merge production origins from env (e.g. https://app.motherhood.rw)
+        if (extraAllowedOrigins != null) {
+            extraAllowedOrigins.stream()
+                .filter(o -> o != null && !o.isBlank())
+                .forEach(config::addAllowedOrigin);
+        }
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         config.setExposedHeaders(List.of("Authorization"));
@@ -32,6 +45,7 @@ public class CorsConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
+        source.registerCorsConfiguration("/webhooks/**", config);
         return source;
     }
 }

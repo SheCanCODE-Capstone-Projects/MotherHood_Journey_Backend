@@ -82,11 +82,15 @@ services:
       SERVER_PORT:                      ${APP_PORT:-8080}
       AT_API_KEY:                       ${AT_API_KEY:-}
       AT_USERNAME:                      ${AT_USERNAME:-}
-      IREMBO_BASE_URL:                  ${IREMBO_BASE_URL:-}
+      # Irembo: IREMBO_API_BASE_URL → irembo.api.base-url  /  IREMBO_API_KEY → irembo.api.key
+      IREMBO_API_BASE_URL:              ${IREMBO_API_BASE_URL:-}
       IREMBO_API_KEY:                   ${IREMBO_API_KEY:-}
-      HMIS_BASE_URL:                    ${HMIS_BASE_URL:-}
+      # HMIS:   HMIS_API_BASE_URL → hmis.api.base-url      /  HMIS_API_KEY → hmis.api.key
+      HMIS_API_BASE_URL:                ${HMIS_API_BASE_URL:-}
       HMIS_API_KEY:                     ${HMIS_API_KEY:-}
+      # NIDA:   NIDA_BASE_URL → nida.base-url              /  NIDA_API_KEY → nida.api-key
       NIDA_BASE_URL:                    ${NIDA_BASE_URL:-}
+      NIDA_API_KEY:                     ${NIDA_API_KEY:-}
       ESCALATION_PENDING_HOURS:         ${ESCALATION_PENDING_HOURS:-48}
     ports:
       - "${APP_PORT:-8080}:8080"

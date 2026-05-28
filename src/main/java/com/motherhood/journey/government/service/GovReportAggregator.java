@@ -53,14 +53,14 @@ public class GovReportAggregator {
     private Map<String, Object> ancAttendance(Period p, UUID geoId) {
         long visits = scalar("""
             SELECT COUNT(*) FROM health_visits hv
-            JOIN mothers m ON hv.mother_id = m.id
-            WHERE m.geo_location_id = ? AND hv.visit_type = 'ANC'
-              AND hv.visit_date BETWEEN ? AND ?
-            """, geoId, p.start, p.end);
+            JOIN mothers m ON hv.patient_ref_id = m.id
+            WHERE hv.patient_type = 'MOTHER' AND m.geo_location_id = ? AND hv.visit_type = 'ANC'
+              AND hv.visit_datetime BETWEEN ? AND ?
+            """, geoId, p.start.atStartOfDay(), p.end.atStartOfDay());
         long activePregnancies = scalar("""
-            SELECT COUNT(*) FROM pregnancies p
-            JOIN mothers m ON p.mother_id = m.id
-            WHERE m.geo_location_id = ? AND p.status = 'ACTIVE'
+            SELECT COUNT(*) FROM pregnancies pr
+            JOIN mothers m ON pr.mother_id = m.id
+            WHERE m.geo_location_id = ? AND pr.status = 'ACTIVE'
             """, geoId);
         return ordered(
             "anc_visits", visits,

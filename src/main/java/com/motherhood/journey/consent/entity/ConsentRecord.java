@@ -57,7 +57,7 @@ public class ConsentRecord {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    @Column(name = "legal_basis", length = 32)
+    @Column(name = "legal_basis", length = 255)
     private String legalBasis;
 
     @Column(name = "revoked_at")

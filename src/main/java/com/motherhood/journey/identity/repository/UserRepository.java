@@ -3,6 +3,7 @@ package com.motherhood.journey.identity.repository;
 
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.enums.UserRole;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +21,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByPhoneNumber(String phoneNumber);
     Optional<User> findByNationalId(String nationalId);
 
+    /** Used by the JWT filter — eagerly loads lazy associations so the cached
+     *  User can be serialized after the Hibernate session closes. */
+    @EntityGraph(attributePaths = {"geoLocation", "facility"})
+    @Query("SELECT u FROM User u WHERE u.phoneNumber = :phone")
+    Optional<User> findByPhoneNumberForAuth(@Param("phone") String phoneNumber);
 
     boolean existsByPhoneNumber(String phoneNumber);
     boolean existsByNationalId(String nationalId);

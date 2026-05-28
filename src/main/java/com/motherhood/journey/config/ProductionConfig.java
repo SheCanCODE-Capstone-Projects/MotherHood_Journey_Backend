@@ -1,5 +1,9 @@
 package com.motherhood.journey.config;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
@@ -22,6 +26,8 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+
+import java.util.Map;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -59,16 +65,51 @@ public class ProductionConfig {
 
     /**
      * Redis cache for prod. Shared across replicas, survives restarts.
+     *
+     * Two serializer configurations are used:
+     * - typedMapper: activateDefaultTyping(NON_FINAL, WRAPPER_OBJECT) for caches that store
+     *   JPA entities (userDetails, facilityLookup). Needed so Jackson knows the concrete class
+     *   when deserializing back from Object.
+     * - simpleMapper: JavaTimeModule only, no defaultTyping for caches that store plain value
+     *   types like List<String> (geoLookup). defaultTyping breaks on Java's unmodifiable lists
+     *   (final internal types) so those caches use a plain serializer.
      */
     @Bean(name = "cacheManager")
     @Profile("prod")
     public CacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
-        RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
+        ObjectMapper typedMapper = new ObjectMapper();
+        typedMapper.registerModule(new JavaTimeModule());
+        typedMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        typedMapper.activateDefaultTyping(
+            typedMapper.getPolymorphicTypeValidator(),
+            ObjectMapper.DefaultTyping.NON_FINAL,
+            JsonTypeInfo.As.WRAPPER_OBJECT
+        );
+
+        ObjectMapper simpleMapper = new ObjectMapper();
+        simpleMapper.registerModule(new JavaTimeModule());
+        simpleMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+        var keySerializer = RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer());
+
+        RedisCacheConfiguration typedConfig = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(1))
             .disableCachingNullValues()
-            .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
-        return RedisCacheManager.builder(connectionFactory).cacheDefaults(defaults).build();
+            .serializeKeysWith(keySerializer)
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                new GenericJackson2JsonRedisSerializer(typedMapper)));
+
+        RedisCacheConfiguration simpleConfig = RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofMinutes(5))
+            .disableCachingNullValues()
+            .serializeKeysWith(keySerializer)
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
+                new GenericJackson2JsonRedisSerializer(simpleMapper)));
+
+        return RedisCacheManager.builder(connectionFactory)
+            .cacheDefaults(typedConfig)
+            .withInitialCacheConfigurations(Map.of("geoLookup", simpleConfig))
+            .build();
     }
 
     /**

@@ -46,6 +46,9 @@ public class SecurityConfig {
                         .requestMatchers("/webhooks/at/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        // Mock government-API endpoints — called internally by RestTemplate;
+                        // these controllers only load when mock.gov-apis.enabled=true (dev only).
+                        .requestMatchers("/mock/**").permitAll()
                         // Fine-grained role checks live on each controller method via
                         // @PreAuthorize. The URL filter only enforces that the caller
                         // is authenticated — letting any role-set defined per endpoint

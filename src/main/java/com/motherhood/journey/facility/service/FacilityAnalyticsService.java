@@ -29,8 +29,8 @@ public class FacilityAnalyticsService {
 
         long ancVisits30d = scalar(
             "SELECT COUNT(*) FROM health_visits hv " +
-            "WHERE hv.facility_id = ? AND hv.visit_type = 'ANC' AND hv.visit_date >= ?",
-            facilityId, thirtyDaysAgo);
+            "WHERE hv.facility_id = ? AND hv.visit_type = 'ANC' AND hv.visit_datetime >= ?",
+            facilityId, thirtyDaysAgo.atStartOfDay());
 
         long expectedAncVisits = scalar(
             "SELECT COUNT(*) FROM pregnancies p JOIN mothers m ON p.mother_id = m.id " +
@@ -59,7 +59,7 @@ public class FacilityAnalyticsService {
             "WHERE sr.facility_id = ? AND sr.status = 'PENDING'", facilityId);
         long srOverdue = scalar(
             "SELECT COUNT(*) FROM service_requests sr " +
-            "WHERE sr.facility_id = ? AND sr.status = 'PENDING' AND sr.created_at < ?",
+            "WHERE sr.facility_id = ? AND sr.status = 'PENDING' AND sr.submitted_at < ?",
             facilityId, now.minusHours(48));
 
         return new FacilityAnalyticsResponse(

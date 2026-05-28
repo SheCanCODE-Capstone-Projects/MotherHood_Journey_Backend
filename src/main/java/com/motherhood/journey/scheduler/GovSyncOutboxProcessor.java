@@ -3,16 +3,15 @@ package com.motherhood.journey.scheduler;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Outbox processor for GovSyncLog entries targeting Irembo.
+ * Polls the gov_sync_log outbox every 30 seconds and dispatches pending entries
+ * to their target systems (NIDA / HMIS / IREMBO).
  *
- * Runs every 30 seconds. Delegates all transactional work to
- * GovSyncOutboxDelegate to ensure @Transactional is applied correctly
- * via Spring proxy (self-calls within the same bean bypass the proxy).
+ * All transactional work is done in GovSyncOutboxDelegate to ensure Spring's
+ * @Transactional proxy is applied correctly (self-calls bypass the proxy).
  */
 @Component
 public class GovSyncOutboxProcessor {
@@ -21,12 +20,6 @@ public class GovSyncOutboxProcessor {
 
     private final GovSyncOutboxDelegate delegate;
 
-    @Value("${irembo.api.base-url:}")
-    private String iremboBaseUrl;
-
-    @Value("${irembo.api.key:}")
-    private String iremboApiKey;
-
     public GovSyncOutboxProcessor(GovSyncOutboxDelegate delegate) {
         this.delegate = delegate;
     }
@@ -34,17 +27,12 @@ public class GovSyncOutboxProcessor {
     @Scheduled(fixedDelay = 30_000)
     @SchedulerLock(name = "govSyncOutboxProcess", lockAtLeastFor = "PT10S", lockAtMostFor = "PT5M")
     public void process() {
-        if (iremboBaseUrl == null || iremboBaseUrl.isBlank()) {
-            log.debug("GovSyncOutboxProcessor: IREMBO_BASE_URL not configured — skipping");
-            return;
-        }
-
         var pending = delegate.fetchAndMarkInProgress();
         if (pending.isEmpty()) {
             return;
         }
 
         log.info("GovSyncOutboxProcessor: processing {} pending entry(ies)", pending.size());
-        pending.forEach(entry -> delegate.dispatch(entry, iremboBaseUrl, iremboApiKey));
+        pending.forEach(delegate::dispatch);
     }
 }
