@@ -2,12 +2,6 @@ spring:
   main:
     banner-mode: off
 
-server:
-  # Railway terminates TLS and forwards requests via HTTP with X-Forwarded-Proto: https.
-  # "framework" makes Spring honor that header so HTTPS URLs are generated everywhere
-  # (OpenAPI server URL, redirects, etc.) — fixes Swagger "Failed to fetch" mixed-content error.
-  forward-headers-strategy: framework
-
   datasource:
     hikari:
       maximum-pool-size: 10
@@ -27,6 +21,10 @@ server:
     show-sql: false
 
 server:
+  # Railway terminates TLS and forwards requests via HTTP with X-Forwarded-Proto: https.
+  # "framework" makes Spring honor that header so HTTPS URLs are generated everywhere
+  # (OpenAPI server URL, redirects, etc.) — fixes Swagger "Failed to fetch" mixed-content error.
+  forward-headers-strategy: framework
   tomcat:
     threads:
       max: 50
