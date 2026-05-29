@@ -111,14 +111,41 @@ public class User implements UserDetails {
         return List.of(new SimpleGrantedAuthority(role.toGrantedAuthority()));
     }
 
-    @Override @JsonIgnore public String  getPassword()             { return passwordHash; }
-    @Override @JsonIgnore public String  getUsername()             { return phoneNumber;  }
-    @Override @JsonIgnore public boolean isAccountNonExpired()     { return true;         }
-    @Override @JsonIgnore public boolean isAccountNonLocked() {
+    @Override
+    @JsonIgnore
+    public String getPassword() {
+        return passwordHash;
+    }
+
+    @Override
+    @JsonIgnore
+    public String getUsername() {
+        return phoneNumber;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonLocked() {
         return lockedUntil == null || lockedUntil.isBefore(LocalDateTime.now());
     }
-    @Override @JsonIgnore public boolean isCredentialsNonExpired() { return true;         }
-    @Override @JsonIgnore public boolean isEnabled()               { return active;       }
+
+    @Override
+    @JsonIgnore
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isEnabled() {
+        return active;
+    }
 
 
     @JsonIgnore

@@ -119,12 +119,16 @@ public class GovReportAggregator {
 
     private static Map<String, Object> ordered(Object... kv) {
         Map<String, Object> m = new LinkedHashMap<>();
-        for (int i = 0; i < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
+        for (int i = 0; i < kv.length; i += 2) {
+            m.put((String) kv[i], kv[i + 1]);
+        }
         return m;
     }
 
     private Period parsePeriod(String period) {
-        if (period == null) throw new IllegalArgumentException("period required");
+        if (period == null) {
+            throw new IllegalArgumentException("period required");
+        }
         try {
             YearMonth ym = YearMonth.parse(period);
             return new Period(ym.atDay(1), ym.atEndOfMonth());

@@ -4,7 +4,7 @@ import com.motherhood.journey.geo.dto.response.GeoResponse;
 import com.motherhood.journey.geo.dto.response.GeoSummaryResponseDTO;
 import com.motherhood.journey.geo.service.GeoService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -146,10 +146,18 @@ public class AppointmentServiceImpl implements AppointmentService {
     @FacilityScope
     public AppointmentResponse updateAppointment(UUID id, UUID facilityId, UpdateAppointmentRequest request) {
         Appointment appointment = findByIdAndFacility(id, facilityId);
-        if (request.scheduledAt() != null)     appointment.setScheduledAt(request.scheduledAt());
-        if (request.appointmentType() != null) appointment.setAppointmentType(parseAppointmentType(request.appointmentType()));
-        if (request.status() != null)          appointment.setStatus(parseAppointmentStatus(request.status()));
-        if (request.notes() != null)          appointment.setNotes(request.notes());
+        if (request.scheduledAt() != null) {
+            appointment.setScheduledAt(request.scheduledAt());
+        }
+        if (request.appointmentType() != null) {
+            appointment.setAppointmentType(parseAppointmentType(request.appointmentType()));
+        }
+        if (request.status() != null) {
+            appointment.setStatus(parseAppointmentStatus(request.status()));
+        }
+        if (request.notes() != null) {
+            appointment.setNotes(request.notes());
+        }
         if (request.healthWorkerId() != null) {
             User hw = userRepository.findById(request.healthWorkerId())
                 .orElseThrow(() -> new CustomException("Health worker not found", HttpStatus.NOT_FOUND));
@@ -241,7 +249,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     private void assertNoPatientOverlap(UUID patientRefId, LocalDateTime scheduledAt) {
-        if (patientRefId == null || scheduledAt == null) return;
+        if (patientRefId == null || scheduledAt == null) {
+            return;
+        }
         LocalDateTime slotStart = scheduledAt.withSecond(0).withNano(0);
         LocalDateTime slotEnd = slotStart.plusMinutes(slotMinutes);
         long overlapping = appointmentRepository.countOverlappingForPatient(patientRefId, slotStart, slotEnd);
@@ -253,7 +263,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     private void assertSlotHasCapacity(UUID facilityId, LocalDateTime scheduledAt) {
-        if (scheduledAt == null) return;
+        if (scheduledAt == null) {
+            return;
+        }
         int minute = scheduledAt.getMinute() - (scheduledAt.getMinute() % slotMinutes);
         LocalDateTime slotStart = scheduledAt.withMinute(minute).withSecond(0).withNano(0);
         LocalDateTime slotEnd = slotStart.plusMinutes(slotMinutes);

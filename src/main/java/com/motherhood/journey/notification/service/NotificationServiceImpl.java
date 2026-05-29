@@ -1,6 +1,7 @@
 package com.motherhood.journey.notification.service;
 
 import com.motherhood.journey.child.entity.VaccinationRecord;
+import com.motherhood.journey.common.exception.ResourceNotFoundException;
 import com.motherhood.journey.identity.entity.User;
 import com.motherhood.journey.identity.enums.UserRole;
 import com.motherhood.journey.identity.repository.UserRepository;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -202,6 +204,24 @@ public class NotificationServiceImpl implements NotificationService {
 
         notificationRepository.save(sms);
         log.info("SMS enqueued for phone {} — type: {}", recipient.getPhoneNumber(), type);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public NotificationResponse getById(UUID id) {
+        SmsNotification sms = notificationRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + id));
+        return convertToResponse(sms);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<NotificationResponse> getByUser(UUID userId) {
+        return notificationRepository
+            .findByRecipientUser_IdOrderByCreatedAtDesc(userId)
+            .stream()
+            .map(this::convertToResponse)
+            .toList();
     }
 
     @Override

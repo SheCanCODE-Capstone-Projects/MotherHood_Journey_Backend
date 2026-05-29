@@ -32,7 +32,9 @@ public final class Dhis2PayloadBuilder {
         List<Map<String, Object>> dataValues = new ArrayList<>();
         aggregates.forEach((key, value) -> {
             String dataElement = dataElementFor(reportType, key);
-            if (dataElement == null) return;
+            if (dataElement == null) {
+                return;
+            }
             Map<String, Object> dv = new LinkedHashMap<>();
             dv.put("dataElement", dataElement);
             dv.put("value", value);
@@ -92,7 +94,9 @@ public final class Dhis2PayloadBuilder {
     }
 
     private static String toDhis2Period(String period) {
-        if (period == null) return "";
+        if (period == null) {
+            return "";
+        }
         return period.replace("-", "");
     }
 }

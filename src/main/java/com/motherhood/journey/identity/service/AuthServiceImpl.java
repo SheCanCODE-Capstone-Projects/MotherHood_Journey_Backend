@@ -102,9 +102,13 @@ public class AuthServiceImpl implements AuthService {
 
     private String clientIp() {
         HttpServletRequest req = currentRequest();
-        if (req == null) return null;
+        if (req == null) {
+            return null;
+        }
         String xff = req.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) return xff.split(",")[0].trim();
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
         return req.getRemoteAddr();
     }
 

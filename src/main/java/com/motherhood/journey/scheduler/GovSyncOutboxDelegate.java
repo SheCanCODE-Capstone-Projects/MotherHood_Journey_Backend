@@ -170,7 +170,9 @@ public class GovSyncOutboxDelegate {
     }
 
     private String truncate(String value, int max) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         return value.length() > max ? value.substring(0, max) : value;
     }
 }

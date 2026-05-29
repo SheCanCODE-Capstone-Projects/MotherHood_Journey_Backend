@@ -126,15 +126,25 @@ public class PregnancyServiceImpl implements PregnancyService {
     @AuditedResource(action = "UPDATE", resourceType = "PREGNANCY")
     public PregnancyResponse updatePregnancy(UUID id, UUID facilityId, UpdatePregnancyRequest request) {
         Pregnancy pregnancy = findByIdAndFacility(id, facilityId);
-        if (request.lmpDate() != null)      pregnancy.setLmpDate(request.lmpDate());
-        if (request.edd() != null)          pregnancy.setEdd(request.edd());
+        if (request.lmpDate() != null) {
+            pregnancy.setLmpDate(request.lmpDate());
+        }
+        if (request.edd() != null) {
+            pregnancy.setEdd(request.edd());
+        }
         if (request.status() != null) {
             assertValidTransition(pregnancy.getStatus(), request.status());
             pregnancy.setStatus(request.status());
         }
-        if (request.gravida() != null)      pregnancy.setGravida(request.gravida());
-        if (request.para() != null)         pregnancy.setPara(request.para());
-        if (request.outcomeNotes() != null) pregnancy.setOutcomeNotes(request.outcomeNotes());
+        if (request.gravida() != null) {
+            pregnancy.setGravida(request.gravida());
+        }
+        if (request.para() != null) {
+            pregnancy.setPara(request.para());
+        }
+        if (request.outcomeNotes() != null) {
+            pregnancy.setOutcomeNotes(request.outcomeNotes());
+        }
         if (request.assignedChwId() != null) {
             User chw = userRepository.findById(request.assignedChwId())
                 .orElseThrow(() -> new CustomException("CHW not found", HttpStatus.NOT_FOUND));
@@ -150,7 +160,9 @@ public class PregnancyServiceImpl implements PregnancyService {
     }
 
     private void assertValidTransition(String from, String to) {
-        if (from == null || from.equals(to)) return;
+        if (from == null || from.equals(to)) {
+            return;
+        }
         Set<String> allowed = ALLOWED_TRANSITIONS.getOrDefault(from, Set.of());
         if (!allowed.contains(to)) {
             throw new CustomException(

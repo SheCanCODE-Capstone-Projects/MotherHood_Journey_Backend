@@ -1,6 +1,6 @@
 package com.motherhood.journey.security;
 
-import com.motherhood.journey.identity.entity.User;
+
 import com.motherhood.journey.identity.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

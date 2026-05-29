@@ -5,7 +5,7 @@ import com.motherhood.journey.identity.dto.request.UpdateUserRequest;
 import com.motherhood.journey.identity.dto.response.UserResponse;
 import com.motherhood.journey.identity.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;

@@ -92,12 +92,19 @@ public class LocalFileStorageService implements FileStorageService {
 
     private String detectMime(byte[] bytes) {
         for (MagicByte sig : SIGNATURES) {
-            if (bytes.length < sig.bytes.length) continue;
+            if (bytes.length < sig.bytes.length) {
+                continue;
+            }
             boolean match = true;
             for (int i = 0; i < sig.bytes.length; i++) {
-                if (bytes[i] != sig.bytes[i]) { match = false; break; }
+                if (bytes[i] != sig.bytes[i]) {
+                    match = false;
+                    break;
+                }
             }
-            if (match) return sig.mime;
+            if (match) {
+                return sig.mime;
+            }
         }
         return null;
     }

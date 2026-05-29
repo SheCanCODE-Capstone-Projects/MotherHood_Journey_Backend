@@ -38,7 +38,8 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Log in with phone + password",
-        description = "Returns an access token (24h) and refresh token (7d). Locks the account for 15 minutes after 5 consecutive failures.")
+        description = "Returns an access token (24h) and refresh token (7d). "
+            + "Locks the account for 15 minutes after 5 consecutive failures.")
     public ResponseEntity<ApiResponse<TokenResponse>> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(ApiResponse.success(authService.login(request), "Login successful"));
     }

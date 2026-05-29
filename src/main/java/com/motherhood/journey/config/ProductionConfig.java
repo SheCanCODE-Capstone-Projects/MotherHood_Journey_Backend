@@ -9,7 +9,7 @@ import jakarta.annotation.PostConstruct;
 import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -130,7 +130,9 @@ public class ProductionConfig implements CachingConfigurer {
      */
     public void evictUser(String phoneNumber) {
         CacheManager manager = cacheManagerProvider.getIfAvailable();
-        if (manager == null) return;
+        if (manager == null) {
+            return;
+        }
         Cache cache = manager.getCache("userDetails");
         if (cache != null) {
             cache.evict(phoneNumber);

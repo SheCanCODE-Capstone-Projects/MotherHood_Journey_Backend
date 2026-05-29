@@ -97,8 +97,12 @@ public class GovernmentServiceImpl implements GovernmentService {
         if (request.scopedGeoIds() != null) {
             gu.setScopedGeoIds(request.scopedGeoIds().toArray(new UUID[0]));
         }
-        if (request.canExport() != null)   gu.setCanExport(request.canExport());
-        if (request.canPushHmis() != null) gu.setCanPushHmis(request.canPushHmis());
+        if (request.canExport() != null) {
+            gu.setCanExport(request.canExport());
+        }
+        if (request.canPushHmis() != null) {
+            gu.setCanPushHmis(request.canPushHmis());
+        }
         return GovernmentResponse.from(gu);
     }
 
@@ -111,7 +115,9 @@ public class GovernmentServiceImpl implements GovernmentService {
     @Transactional
     public void deactivate(UUID id) {
         GovernmentUser gu = load(id);
-        if (gu.getUser() != null) gu.getUser().setActive(false);
+        if (gu.getUser() != null) {
+            gu.getUser().setActive(false);
+        }
     }
 
     private GovernmentUser load(UUID id) {

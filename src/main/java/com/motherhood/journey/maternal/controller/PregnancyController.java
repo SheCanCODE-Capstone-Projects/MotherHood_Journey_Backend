@@ -25,7 +25,8 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/pregnancies")
-@Tag(name = "Pregnancies", description = "Pregnancy lifecycle (ACTIVE / DELIVERED / LOST / TRANSFERRED), EDD, CHW assignment")
+@Tag(name = "Pregnancies",
+    description = "Pregnancy lifecycle (ACTIVE / DELIVERED / LOST / TRANSFERRED), EDD, CHW assignment")
 public class PregnancyController {
 
     private final PregnancyService pregnancyService;
@@ -70,7 +71,8 @@ public class PregnancyController {
     @PatchMapping("/{id}")
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN', 'MOH_ADMIN')")
     @Operation(summary = "Update a pregnancy (status transitions enforced)",
-        description = "Allowed transitions from ACTIVE: DELIVERED, LOST, TRANSFERRED. Terminal states cannot be reopened.")
+        description = "Allowed transitions from ACTIVE: DELIVERED, LOST, TRANSFERRED. "
+            + "Terminal states cannot be reopened.")
     public ResponseEntity<ApiResponse<PregnancyResponse>> updatePregnancy(
         @PathVariable UUID id,
         @RequestParam UUID facilityId,

@@ -76,7 +76,9 @@ public class JwtUtil {
     @SuppressWarnings("unchecked")
     public List<UUID> extractGeoScopeIds(String token) {
         Object raw = extractClaim(token, claims -> claims.get(JwtClaims.GEO_SCOPE_IDS));
-        if (raw == null) return List.of();
+        if (raw == null) {
+            return List.of();
+        }
         return ((List<String>) raw).stream().map(UUID::fromString).toList();
     }
 

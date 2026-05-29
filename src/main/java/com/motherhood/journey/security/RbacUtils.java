@@ -29,16 +29,22 @@ public final class RbacUtils {
 
     public static User currentUser() {
         Authentication auth = currentAuth();
-        if (auth == null) return null;
+        if (auth == null) {
+            return null;
+        }
         return auth.getPrincipal() instanceof User u ? u : null;
     }
 
     public static boolean hasAnyAuthority(String... authorities) {
         Authentication auth = currentAuth();
-        if (auth == null) return false;
+        if (auth == null) {
+            return false;
+        }
         for (GrantedAuthority granted : auth.getAuthorities()) {
             for (String wanted : authorities) {
-                if (granted.getAuthority().equals(wanted)) return true;
+                if (granted.getAuthority().equals(wanted)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -46,7 +52,9 @@ public final class RbacUtils {
 
     public static boolean isCrossFacility() {
         Authentication auth = currentAuth();
-        if (auth == null) return false;
+        if (auth == null) {
+            return false;
+        }
         return auth.getAuthorities().stream()
             .map(GrantedAuthority::getAuthority)
             .anyMatch(CROSS_FACILITY_AUTHORITIES::contains);
@@ -54,7 +62,9 @@ public final class RbacUtils {
 
     public static UUID currentJwtFacilityId() {
         Authentication auth = currentAuth();
-        if (auth == null) return null;
+        if (auth == null) {
+            return null;
+        }
         return auth.getDetails() instanceof FacilityAuthDetails fd ? fd.facilityId() : null;
     }
 
@@ -65,12 +75,16 @@ public final class RbacUtils {
      */
     public static List<UUID> currentGeoScopeIds() {
         Authentication auth = currentAuth();
-        if (auth == null) return List.of();
+        if (auth == null) {
+            return List.of();
+        }
         return auth.getDetails() instanceof FacilityAuthDetails fd ? fd.geoScopeIds() : List.of();
     }
 
     public static void assertSameFacility(UUID resourceFacilityId) {
-        if (isCrossFacility()) return;
+        if (isCrossFacility()) {
+            return;
+        }
         UUID jwtFacilityId = currentJwtFacilityId();
         if (jwtFacilityId == null || !jwtFacilityId.equals(resourceFacilityId)) {
             throw new CustomException("Access denied: facility mismatch", HttpStatus.FORBIDDEN);
@@ -79,9 +93,13 @@ public final class RbacUtils {
 
     public static void assertGeoScope(UUID resourceGeoId) {
         User user = currentUser();
-        if (user == null) return;
+        if (user == null) {
+            return;
+        }
         UserRole role = user.getRole();
-        if (role != UserRole.DISTRICT_OFFICER) return;
+        if (role != UserRole.DISTRICT_OFFICER) {
+            return;
+        }
         List<UUID> scope = currentGeoScopeIds();
         if (scope.isEmpty() || !scope.contains(resourceGeoId)) {
             throw new CustomException(

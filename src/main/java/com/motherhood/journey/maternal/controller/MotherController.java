@@ -34,7 +34,8 @@ public class MotherController {
     @PostMapping
     @PreAuthorize("hasAnyRole('HEALTH_WORKER', 'FACILITY_ADMIN')")
     @Operation(summary = "Register a new mother",
-        description = "Creates a mother record, generates a unique MH-YYYY-NNNNNN health ID, and triggers async NIDA verification.")
+        description = "Creates a mother record, generates a unique MH-YYYY-NNNNNN health ID, "
+            + "and triggers async NIDA verification.")
     public ResponseEntity<MotherResponse> register(
             @Valid @RequestBody CreatedMotherRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)

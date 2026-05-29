@@ -9,7 +9,7 @@ import com.motherhood.journey.facility.entity.FacilityType;
 import com.motherhood.journey.facility.service.FacilityAnalyticsService;
 import com.motherhood.journey.facility.service.FacilityService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.domain.Page;

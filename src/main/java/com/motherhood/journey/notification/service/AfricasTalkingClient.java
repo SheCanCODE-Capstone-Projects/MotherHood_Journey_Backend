@@ -56,9 +56,15 @@ public class AfricasTalkingClient {
 
     /** Converts local Rwandan format (07xx) to E.164 (+25x7xx). */
     private static String normalizePhone(String phone) {
-        if (phone == null || phone.isBlank()) return phone;
-        if (phone.startsWith("+")) return phone;
-        if (phone.startsWith("0")) return "+250" + phone.substring(1);
+        if (phone == null || phone.isBlank()) {
+            return phone;
+        }
+        if (phone.startsWith("+")) {
+            return phone;
+        }
+        if (phone.startsWith("0")) {
+            return "+250" + phone.substring(1);
+        }
         return "+" + phone;
     }
 }
