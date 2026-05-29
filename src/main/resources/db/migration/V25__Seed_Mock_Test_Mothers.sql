@@ -133,7 +133,7 @@ BEGIN
     END LOOP;
 
     -- ── bump the health-ID sequence so the application never collides ──
-    PERFORM setval('mother_health_id_seq', 2000, TRUE);
+    PERFORM setval('seq_mother_health_id', 2000, TRUE);
 
     RAISE NOTICE 'Mock test mothers seeded successfully.';
 END $$;
