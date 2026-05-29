@@ -17,10 +17,14 @@ public class AfricasTalkingClient {
     @Value("${africas-talking.username}")
     private String username;
 
+    @Value("${africas-talking.sender-id:}")
+    private String senderId;
+
     @PostConstruct
     void init() {
         AfricasTalking.initialize(username, apiKey);
-        log.info("Africa's Talking SDK initialized — username={}", username);
+        log.info("Africa's Talking SDK initialized — username={} senderId={}",
+            username, senderId.isBlank() ? "(default)" : senderId);
     }
 
     /**
@@ -30,7 +34,10 @@ public class AfricasTalkingClient {
     public String sendSms(String to, String message) {
         try {
             SmsService sms = AfricasTalking.getService(AfricasTalking.SERVICE_SMS);
-            var recipients = sms.send(message, new String[]{normalizePhone(to)}, true);
+            String from = (senderId != null && !senderId.isBlank()) ? senderId : null;
+            var recipients = from != null
+                ? sms.send(message, from, new String[]{normalizePhone(to)}, true)
+                : sms.send(message, new String[]{normalizePhone(to)}, true);
 
             if (recipients != null && !recipients.isEmpty()) {
                 var first = recipients.getFirst();

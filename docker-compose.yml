@@ -81,6 +81,7 @@ services:
       SERVER_PORT:                      ${APP_PORT:-8080}
       AT_API_KEY:                       ${AT_API_KEY:-}
       AT_USERNAME:                      ${AT_USERNAME:-}
+      AT_SENDER_ID:                     ${AT_SENDER_ID:-}
       # Irembo: IREMBO_BASE_URL → irembo.api.base-url  /  IREMBO_API_KEY → irembo.api.key
       IREMBO_BASE_URL:                  ${IREMBO_BASE_URL:-}
       IREMBO_API_KEY:                   ${IREMBO_API_KEY:-}

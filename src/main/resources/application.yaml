@@ -89,6 +89,7 @@ appointment:
 africas-talking:
   api-key: ${AT_API_KEY}
   username: ${AT_USERNAME}
+  sender-id: ${AT_SENDER_ID:}
 
 # Irembo Government Integration
 irembo:
