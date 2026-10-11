@@ -7,6 +7,7 @@
 .run/
 
 target/
+temp_auto_push.bat
 *.class
 *.jar
 *.war
@@ -16,7 +17,5 @@ target/
 
 # Local file storage
 uploads/
-branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
 .gitignore
+branch_structure.json
