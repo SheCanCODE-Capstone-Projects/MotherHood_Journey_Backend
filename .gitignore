@@ -4,7 +4,6 @@
 .run/
 
 target/
-temp_auto_push.bat
 *.class
 *.jar
 *.war
@@ -16,5 +15,7 @@ temp_auto_push.bat
 uploads/
 .gitignore
 branch_structure.json
-config.bat
 node_modules
+.env
+.env.local
+.env.staging
