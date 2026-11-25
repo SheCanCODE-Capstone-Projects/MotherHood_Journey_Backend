@@ -16,6 +16,4 @@ uploads/
 .gitignore
 branch_structure.json
 node_modules
-.env
-.env.local
-.env.staging
+config.bat
