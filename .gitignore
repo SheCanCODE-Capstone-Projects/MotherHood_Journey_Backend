@@ -7,7 +7,6 @@
 .run/
 
 target/
-temp_auto_push.bat
 *.class
 *.jar
 *.war
